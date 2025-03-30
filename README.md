@@ -1,6 +1,6 @@
 # EM Algorithm for 1D Gaussian Mixture Model
 
-This README explains the derivation of the Expectation-Maximization (EM) algorithm for fitting a 1D Gaussian mixture model with $N$ components. It covers two main derivation tasks:
+This tutorial explains the derivation of the Expectation-Maximization (EM) algorithm for fitting a 1D Gaussian mixture model with $N$ components. It covers two main derivation tasks:
 
 1. **Posterior Distribution $P(z|x)$:**  
    Deriving an expression for the posterior distribution over the latent variable $z \in \{1, 2, \dots, N\}$ for a given data point $x$.
@@ -15,7 +15,7 @@ In addition, this README describes how the update formulas for the Gaussian para
 ## 1. Derivation of the Posterior Distribution $P(z|x)$ (E-Step)
 
 For a 1D Gaussian mixture model with $N$ components, each component $j$ has:
-- A mixing weight: $\lambda_j$, with $\sum_{j=1}^N \lambda_j = 1$
+- A mixing weight: $\lambda_j$; subjecto to constraint $\sum_{j=1}^N \lambda_j = 1$
 - A mean: $\mu_j$
 - A variance: $\sigma_j^2$
 
@@ -34,7 +34,7 @@ $$
 By applying Bayes' rule, the posterior distribution (or "responsibility") is:
 
 $$
-P(z=j|x) = \frac{p(x,z=j)}{p(x)} = \frac{\lambda_j \, \mathcal{N}(x; \mu_j, \sigma_j^2)}{\sum_{k=1}^N \lambda_k \, \mathcal{N}(x; \mu_k, \sigma_k^2)}.
+P(z=j|x) = \frac{p(x,z=j)}{p(x)} = \frac{\lambda_j \mathcal{N}(x; \mu_j, \sigma_j^2)}{\sum_{k=1}^N \lambda_k \mathcal{N}(x; \mu_k, \sigma_k^2)}.
 $$
 
 We denote this as:
@@ -56,21 +56,23 @@ $$
 For a dataset $\{x}_{i=1}^M$, the total ELBO is:
 
 $$
-\mathcal{L} = \sum_{i=1}^M \sum_{j=1}^N \gamma_j(x_i) \log \frac{\lambda_j \mathcal{N}(x_i; \mu_j, \sigma_j^2)}{\gamma_j(x_i)}.
+\mathcal{L} = \sum_{i=1}^M \sum_{j=1}^N \gamma_j(x_i) \log \frac{\lambda_j \mathcal{N}(x_i; \mu_j, \sigma_j^2)}{\gamma_j(x_i)} = \sum_{i=1}^M \sum_{j=1}^N \gamma_{ij} \log \frac{\lambda_j \mathcal{N}(x_i; \mu_j, \sigma_j^2)}{\gamma_j(x_i)}
 $$
+
+where we replaced $\gamma_j(x_i) = \gamma_{ij}$ for brevity.
 
 ### 2.1. Updating the Mixing Weights $\lambda_j$
 
 Only the term:
 
 $$
-\sum_{i=1}^M \gamma_j(x_i) \log \lambda_j
+\sum_{i=1}^M \gamma_{ij} \log \lambda_j
 $$
 
 depends on the mixing weights. To update $\lambda_j$, we maximize:
 
 $$
-\mathcal{L}_\lambda = \sum_{i=1}^M \sum_{j=1}^N \gamma_j(x_i) \log \lambda_j
+\mathcal{L_\lambda} = \sum_{i=1}^M \sum_{j=1}^N \gamma_{ij} \log \lambda_j.
 $$
 
 subject to the constraint:
@@ -84,28 +86,28 @@ $$
 Define the Lagrangian:
 
 $$
-\mathcal{J} = \sum_{i=1}^M \sum_{j=1}^N \gamma_j(x_i) \log \lambda_j + \alpha \left(1 - \sum_{j=1}^N \lambda_j\right).
+\mathcal{J} = \sum_{i=1}^M \sum_{j=1}^N \gamma_{ij} \log \lambda_j + \alpha \left(1 - \sum_{j=1}^N \lambda_j\right).
 $$
 
-Taking the derivative with respect to \(\lambda_j\) and setting it to zero:
+Taking the derivative with respect to $\lambda_j$ and setting it to zero:
 
 $$
-\frac{\partial \mathcal{J}}{\partial \lambda_j} = \frac{1}{\lambda_j} \sum_{i=1}^M \gamma_j(x_i) - \alpha = 0,
+\frac{\partial \mathcal{J}}{\partial \lambda_j} = \frac{1}{\lambda_j} \sum_{i=1}^M \gamma_{ij} - \alpha = 0,
 $$
 
 which yields:
 
 $$
-\lambda_j = \frac{1}{\alpha} \sum_{i=1}^M \gamma_j(x_i).
+\lambda_j = \frac{1}{\alpha} \sum_{i=1}^M \gamma_{ij}.
 $$
 
 Enforcing the constraint:
 
 $$
-\sum_{j=1}^N \lambda_j = \frac{1}{\alpha} \sum_{i=1}^M \sum_{j=1}^N \gamma_j(x_i) = \frac{1}{\alpha} M = 1,
+\sum_{j=1}^N \lambda_j = \frac{1}{\alpha} \sum_{i=1}^M \sum_{j=1}^N \gamma_{ij} = \frac{1}{\alpha} M = 1,
 $$
 
-we find \(\alpha = M\). Therefore, the updated mixing weights are:
+we find $\alpha = M$. Therefore, the updated mixing weights are:
 
 $$
 \lambda_j = \frac{1}{M} \sum_{i=1}^M \gamma_j(x_i).
@@ -120,7 +122,7 @@ $$
 For a Gaussian mixture model, the complete-data log-likelihood is:
 
 $$
-\log p(x, z \mid \theta) = \sum_{i=1}^N \sum_{j=1}^K I(z_i = j) \left[\log \lambda_j + \log \mathcal{N}(x_i; \mu_j, \sigma_j^2)\right],
+\log p(x, z \mid \theta) = \sum_{i=1}^N \sum_{j=1}^N I(z_i = j) \left[\log \lambda_j + \log \mathcal{N}(x_i; \mu_j, \sigma_j^2)\right],
 $$
 
 where $I(z_i = j)$ is an indicator function.
@@ -128,7 +130,7 @@ where $I(z_i = j)$ is an indicator function.
 Since $z$ is unobserved, we take the expectation with respect to the posterior $P(z_i=j|x_i)$ (i.e., using responsibilities $\gamma_{ij}\$):
 
 $$
-Q(\theta) = \sum_{i=1}^N \sum_{j=1}^K \gamma_{ij} \left[\log \lambda_j + \log \mathcal{N}(x_i; \mu_j, \sigma_j^2)\right].
+Q(\theta) = \sum_{i=1}^N \sum_{j=1}^N \gamma_{ij} \left[\log \lambda_j + \log \mathcal{N}(x_i; \mu_j, \sigma_j^2)\right].
 $$
 
 The Gaussian density term is:
@@ -152,28 +154,36 @@ $$
 $$
 
 Solving for $\mu_j$ gives:
-\[
+
+$$
 \mu_j = \frac{\sum_{i=1}^N \gamma_{ij} x_i}{\sum_{i=1}^N \gamma_{ij}}.
-\]
+$$
 
-### 3.3. Updating the Variance $\sigma_j^2
+### 3.3. Updating the Variance $\sigma_j^2$
 
-Consider the terms involving $\(\sigma_j^2\)$:
-\[
+Consider the terms involving variance $\sigma_j^2$:
+
+$$
 \sum_{i=1}^N \gamma_{ij}\left[-\frac{1}{2}\log(2\pi \sigma_j^2) - \frac{(x_i-\mu_j)^2}{2\sigma_j^2}\right].
-\]
-Taking the derivative with respect to \(\sigma_j^2\) and setting it to zero:
-\[
+$$
+
+Taking the derivative with respect to $\sigma_j^2$ and setting it to zero:
+
+$$
 -\frac{1}{2\sigma_j^2}\sum_{i=1}^N \gamma_{ij} + \frac{1}{2(\sigma_j^2)^2}\sum_{i=1}^N \gamma_{ij}(x_i-\mu_j)^2 = 0.
-\]
-Multiplying both sides by \(2(\sigma_j^2)^2\) leads to:
-\[
+$$
+
+Multiplying both sides by $2(\sigma_j^2)^2$ leads to:
+
+$$
 -\sigma_j^2\sum_{i=1}^N \gamma_{ij} + \sum_{i=1}^N \gamma_{ij}(x_i-\mu_j)^2 = 0.
-\]
+$$
+
 Thus, the update for the variance is:
-\[
+
+$$
 \sigma_j^2 = \frac{\sum_{i=1}^N \gamma_{ij}(x_i-\mu_j)^2}{\sum_{i=1}^N \gamma_{ij}}.
-\]
+$$
 
 ---
 
@@ -208,4 +218,4 @@ $$
     \sigma_j^2 = \frac{\sum_{i=1}^N \gamma_{ij}(x_i-\mu_j)^2}{\sum_{i=1}^N \gamma_{ij}}.
 $$
 
-These derivations ensure that each update step increases the likelihood (or, equivalently, the ELBO) and handles the latent variable assignments effectively via the responsibilities. The use of Lagrange multipliers in updating the mixing weights guarantees that $\(\sum_{j=1}^N \lambda_j = 1\)$.
+These derivations ensure that each update step increases the likelihood (or, equivalently, the ELBO) and handles the latent variable assignments effectively via the responsibilities. The use of Lagrange multipliers in updating the mixing weights guarantees that: $\sum_{j=1}^N \lambda_j = 1\$.
