@@ -50,7 +50,7 @@ $$
 The EM algorithm maximizes the log-likelihood by maximizing the Evidence Lower Bound (ELBO). For a single data point $x$ and a posterior $q(z)$ (which is chosen as $P(z|x))$, the ELBO is given by:
 
 $$
-\mathcal{L}(q,\theta) = \sum_{z} q(z) \log \frac{(x,z|\theta)}{q(z)}.
+\mathcal{L}(q,\theta) = \sum_{z} q(z) \log \frac{P(x,z|\theta)}{q(z)}.
 $$
 
 For a dataset $\{x}_{i=1}^M$, the total ELBO is:
@@ -117,12 +117,12 @@ $$
 
 ## 3. Derivation of the Updates for the Means and Variances
 
-### 3.1. The Complete-Data Log-Likelihood
+### 3.1. The Complete-Data Log-Likelihood $Q(\theta)$
 
 For a Gaussian mixture model, the complete-data log-likelihood is:
 
 $$
-\log p(x, z \mid \theta) = \sum_{i=1}^N \sum_{j=1}^N I(z_i = j) \left[\log \lambda_j + \log \mathcal{N}(x_i; \mu_j, \sigma_j^2)\right],
+\log p(x \mid \theta) = \sum_{i=1}^M \sum_{j=1}^N I(z_i = j) \left[\log \lambda_j + \log \mathcal{N}(x_i; \mu_j, \sigma_j^2)\right],
 $$
 
 where $I(z_i = j)$ is an indicator function.
@@ -200,22 +200,22 @@ $$
 
 - **M-Step:**  
   Update the parameters using the computed responsibilities:
-  - **Mixing Weights:**
+   - **Mixing Weights:**
 
 $$
-    \lambda_j = \frac{1}{M} \sum_{i=1}^M \gamma_{ij}.
+   \lambda_j = \frac{1}{M} \sum_{i=1}^M \gamma_{ij}.
 $$
 
-  - **Means:**
+   - **Means:**
 
 $$
-    \mu_j = \frac{\sum_{i=1}^N \gamma_{ij} x_i}{\sum_{i=1}^N \gamma_{ij}}.
+   \mu_j = \frac{\sum_{i=1}^N \gamma_{ij} x_i}{\sum_{i=1}^N \gamma_{ij}}.
 $$
 
-  - **Variances:**
+   - **Variances:**
 
 $$
-    \sigma_j^2 = \frac{\sum_{i=1}^N \gamma_{ij}(x_i-\mu_j)^2}{\sum_{i=1}^N \gamma_{ij}}.
+   \sigma_j^2 = \frac{\sum_{i=1}^N \gamma_{ij}(x_i-\mu_j)^2}{\sum_{i=1}^N \gamma_{ij}}.
 $$
 
-These derivations ensure that each update step increases the likelihood (or, equivalently, the ELBO) and handles the latent variable assignments effectively via the responsibilities. The use of Lagrange multipliers in updating the mixing weights guarantees that: $\sum_{j=1}^N \lambda_j = 1\$.
+These derivations ensure that each update step increases the likelihood (or, equivalently, the ELBO) and handles the latent variable assignments effectively via the responsibilities. The use of Lagrange multipliers in updating the mixing weights guarantees that: $\sum_{j=1}^N \lambda_j = 1\.$
