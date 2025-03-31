@@ -50,13 +50,13 @@ $$
 The EM algorithm maximizes the log-likelihood by maximizing the Evidence Lower Bound (ELBO). For a single data point $x$ and a posterior $q(z)$ (which is chosen as $P(z|x))$, the ELBO is given by:
 
 $$
-\mathcal{L}(q,\theta) = \sum_{z} q(z) \log \frac{P(x,z|\theta)}{q(z)}.
+\mathcal{L}(q,\theta) = \sum_{z} q(z) \log \frac{p(x,z|\theta)}{q(z)}.
 $$
 
 For a dataset $\{x}_{i=1}^M$, the total ELBO is:
 
 $$
-\mathcal{L} = \sum_{i=1}^M \sum_{j=1}^N \gamma_j(x_i) \log \frac{\lambda_j \mathcal{N}(x_i; \mu_j, \sigma_j^2)}{\gamma_j(x_i)} = \sum_{i=1}^M \sum_{j=1}^N \gamma_{ij} \log \frac{\lambda_j \mathcal{N}(x_i; \mu_j, \sigma_j^2)}{\gamma_j(x_i)}
+\mathcal{L} = \sum_{i=1}^M \sum_{j=1}^N \gamma_j(x_i) \log \frac{\lambda_j \mathcal{N}(x_i; \mu_j, \sigma_j^2)}{\gamma_j(x_i)} = \sum_{i=1}^M \sum_{j=1}^N \gamma_{ij} \log \frac{\lambda_j \mathcal{N}(x_i; \mu_j, \sigma_j^2)}{\gamma_{ij}}
 $$
 
 where we replaced $\gamma_j(x_i) = \gamma_{ij}$ for brevity.
@@ -69,7 +69,7 @@ $$
 \sum_{i=1}^M \gamma_{ij} \log \lambda_j
 $$
 
-depends on the mixing weights. To update $\lambda_j$, we maximize:
+depends on the mixing weights ($\gamma_{ij}$ are fixed in the E-step). To update $\lambda_j$, we maximize:
 
 $$
 \mathcal{L_\lambda} = \sum_{i=1}^M \sum_{j=1}^N \gamma_{ij} \log \lambda_j.
@@ -110,7 +110,7 @@ $$
 we find $\alpha = M$. Therefore, the updated mixing weights are:
 
 $$
-\lambda_j = \frac{1}{M} \sum_{i=1}^M \gamma_j(x_i).
+\lambda_j = \frac{1}{M} \sum_{i=1}^M \gamma_{ij}.
 $$
 
 ---
@@ -191,28 +191,28 @@ $$
 
 ### EM Algorithm Steps
 
-- **E-Step:**  
+#### **E-Step:**  
   Compute the posterior (responsibilities) for each data point $x$ and component $j$:
 
 $$
-  \gamma_j(x) = \frac{\lambda_j \, \mathcal{N}(x; \mu_j, \sigma_j^2)}{\sum_{k=1}^N \lambda_k \, \mathcal{N}(x; \mu_k, \sigma_k^2)}.
+  \gamma_j(x) = \frac{\lambda_j \mathcal{N}(x; \mu_j, \sigma_j^2)}{\sum_{k=1}^N \lambda_k  \mathcal{N}(x; \mu_k, \sigma_k^2)}.
 $$
 
-- **M-Step:**  
+#### **M-Step:**  
   Update the parameters using the computed responsibilities:
-   - **Mixing Weights:**
+   * **Mixing Weights:**
 
 $$
    \lambda_j = \frac{1}{M} \sum_{i=1}^M \gamma_{ij}.
 $$
 
-   - **Means:**
+   * **Means:**
 
 $$
    \mu_j = \frac{\sum_{i=1}^N \gamma_{ij} x_i}{\sum_{i=1}^N \gamma_{ij}}.
 $$
 
-   - **Variances:**
+   * **Variances:**
 
 $$
    \sigma_j^2 = \frac{\sum_{i=1}^N \gamma_{ij}(x_i-\mu_j)^2}{\sum_{i=1}^N \gamma_{ij}}.
