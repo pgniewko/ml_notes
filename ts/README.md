@@ -2,8 +2,8 @@
 
 These notes are inspired by Patrick Walters's [paper](https://pubs.acs.org/doi/10.1021/acs.jcim.3c01790) on the application of Thompson Sampling (TS) to virtual high-throughput screening (VHTS).
 
-Our goal is to derive equations (3) and (4) from the paper using a Bayesian update for a univariate Gaussian model with a Gaussian prior.
-In the paper, the derivation is provided for each reagent index $i$.
+Our goal is to derive equations (4) and (5) from the paper using a Bayesian update for a univariate Gaussian model with a Gaussian prior.
+In the paper, the formulas are provided for each reagent, indexed by $i$.
 Since these updates are independent, we drop the reagent index for simplicity and use the index $i$ to denote samples.
 
 ## We consider the following setup:
@@ -100,7 +100,7 @@ $$
 \log p(\mu \mid \textbf{x}) \propto -\frac{1}{2} \left[ \mu^2\left(\frac{n}{\sigma^2} + \frac{1}{\sigma_0^2}\right) - 2\mu \left(\frac{\sum_{i=1}^{n} x_i}{\sigma^2} + \frac{\mu_0}{\sigma_0^2}\right) \right].
 $$
 
-This expression is quadratic in $\mu$ and - by the properties of the Gaussian distribution-- it represents the logarithm of a normal density. To read off the parameters, it is most instructive to "complete the square".
+This expression is quadratic in $\mu$ and - by the properties of the Gaussian distribution - it represents the logarithm of a normal density. To read off the parameters, it is most instructive to "complete the square".
 
 ---
 
@@ -135,13 +135,13 @@ with:
 - **Posterior Variance:**
   
 $$
-  \sigma_n^2 = \frac{1}{A} = \left(\frac{n}{\sigma^2} + \frac{1}{\sigma_0^2}\right)^{-1} \overset{\text{eq. 4}}{=} \frac{\sigma_0^2\sigma^2}{\sigma^2 + n\sigma_0^2}
+  \sigma_n^2 = \frac{1}{A} = \left(\frac{n}{\sigma^2} + \frac{1}{\sigma_0^2}\right)^{-1} \overset{\text{eq. 5}}{=} \frac{\sigma_0^2\sigma^2}{\sigma^2 + n\sigma_0^2}
 $$
 
 - **Posterior Mean:**
 
 $$
-  \mu_n = \frac{B}{A} = \sigma_n^2 \left(\frac{\sum_{i=1}^{n} x_i}{\sigma^2} + \frac{\mu_0}{\sigma_0^2}\right) = \left(\frac{\sigma_0^2\sigma^2}{\sigma^2 + n\sigma_0^2}\right)\left(\frac{n\bar{x}\sigma_0^2 + \sigma^2\mu_0}{\sigma^2\sigma_0^2}\right) \overset{\text{eq. 3}}{=} \frac{\sigma^2\mu_0 + n\bar{x}\sigma_0^2}{\sigma^2 + n\sigma_0^2}
+  \mu_n = \frac{B}{A} = \sigma_n^2 \left(\frac{\sum_{i=1}^{n} x_i}{\sigma^2} + \frac{\mu_0}{\sigma_0^2}\right) = \left(\frac{\sigma_0^2\sigma^2}{\sigma^2 + n\sigma_0^2}\right)\left(\frac{n\bar{x}\sigma_0^2 + \sigma^2\mu_0}{\sigma^2\sigma_0^2}\right) \overset{\text{eq. 4}}{=} \frac{\sigma^2\mu_0 + n\bar{x}\sigma_0^2}{\sigma^2 + n\sigma_0^2}
 $$
 
 Were we expressed $\sum_{i=1}^{n} x_i$ as $n\bar{x}$.
