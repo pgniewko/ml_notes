@@ -100,7 +100,7 @@ $$
 \log p(\mu \mid \textbf{x}) \propto -\frac{1}{2} \left[ \mu^2\left(\frac{n}{\sigma^2} + \frac{1}{\sigma_0^2}\right) - 2\mu \left(\frac{\sum_{i=1}^{n} x_i}{\sigma^2} + \frac{\mu_0}{\sigma_0^2}\right) \right].
 $$
 
-This expression is quadratic in $\mu$ and - by the properties of the Gaussian distribution - it represents the logarithm of a normal density. To read off the parameters, it is most instructive to "complete the square".
+This expression is quadratic in $\mu$ and it represents the logarithm of a normal density - Gaussian distribution is a conjugate prior on $\mu$. To read off the parameters, it is most instructive to "complete the square".
 
 ---
 
