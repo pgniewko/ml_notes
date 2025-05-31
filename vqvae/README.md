@@ -21,7 +21,7 @@ The encoder maps input data $\( x \)$ to a latent representation $\( z_e(x) \)$.
 The encoder output $\( z_e(x) \)$ is quantized to the nearest codebook entry $\( e_k \)$:
 
 $$
-k^* = \arg\min_k \| z_e(x) - e_k \|_2
+k^* = \arg\min_k \Vert z_e(x) - e_k \Vert_2
 $$
 
 $$
@@ -45,7 +45,7 @@ VQ-VAE uses a combination of three loss terms:
 This loss ensures that the reconstructed output is similar to the original input.
 
  $$
- \mathcal{L}_{\text{recon}} = \| x - \hat{x} \|_2^2
+ \mathcal{L}_{\text{recon}} = \Vert x - \text{decoder}[z_q(x)] \Vert_2^2
  $$
 
 ### 2. Commitment Loss
@@ -55,7 +55,7 @@ Encourages the encoder outputs to stay close to their assigned codebook entry, s
 
 
   $$
-  \mathcal{L}_{\text{commit}} = \beta \| z_e(x) - \text{sg}[e_k^*] \|_2^2
+  \mathcal{L}_{\text{commit}} = \beta \Vert z_e(x) - \text{sg}[e_k^*] \Vert_2^2
   $$
 
 Where:
@@ -68,7 +68,7 @@ Where:
 Directly updates the codebook vectors to move them toward the encoder outputs that select them.
 
 $$
-\mathcal{L}_{\text{codebook}} = \| \text{sg}[z_e(x)] - e_k^* \|_2^2
+\mathcal{L}_{\text{codebook}} = \Vert \text{sg}[z_e(x)] - e_k^* \Vert_2^2
 $$
 
 Where only the codebook entries are updated by this term.
