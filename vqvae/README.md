@@ -1,117 +1,108 @@
 # VQ-VAE: Vector Quantized Variational Autoencoder
 
-This repository contains a minimal, clear implementation of the **VQ-VAE** (Vector Quantized Variational Autoencoder) model, alongside thorough explanations of the key architectural ideas, training mechanisms, loss functions, and practical considerations. The code is written in PyTorch and can be used as a foundation for further research or as an educational resource.
-
----
-
-## Table of Contents
-
-- [Overview](#overview)
-- [How VQ-VAE Works](#how-vq-vae-works)
-- [Losses in VQ-VAE](#losses-in-vq-vae)
-  - [Why Commitment and Codebook Losses?](#why-commitment-and-codebook-losses)
-- [Straight-Through Estimator (STE)](#straight-through-estimator-ste)
-- [Posterior Collapse: Why VQ-VAE Avoids It](#posterior-collapse-why-vq-vae-avoids-it)
-- [How to Sample New Examples](#how-to-sample-new-examples)
-  - [USA Example: Sampling from the Codebook](#usa-example-sampling-from-the-codebook)
-- [Minimal VQ-VAE Implementation](#minimal-vq-vae-implementation)
-- [References](#references)
+This repository demonstrates a minimal [implementation](./notebook/VQVAE-example.ipynb) of **VQ-VAE** (Vector Quantized Variational Autoencoder) in PyTorch, along with explanations for the key components of the model, including the straight-through estimator (STE), commitment loss, and codebook loss.
 
 ---
 
 ## Overview
 
-**VQ-VAE** introduces discrete latent variables to the autoencoder family of models, enabling efficient and interpretable representations of high-dimensional data such as images, audio, and video.  
-Unlike traditional VAEs (which use continuous latent spaces), VQ-VAE uses a *codebook* of learnable embeddings. Each input is encoded and then quantized to the nearest codebook vector, forming a sequence of discrete codes that the decoder uses to reconstruct the input.
-
-Key highlights:
-
-- **Discrete, learnable latent space** (the codebook)
-- **No KL divergence** as in standard VAEs, thus no posterior collapse
-- **Enables learning a prior over discrete codes** for advanced generative modeling (e.g., DALL·E, Jukebox, VQGAN)
+**VQ-VAE** introduces discrete latent variables to the autoencoder framework. Instead of mapping inputs to a continuous latent space, the encoder outputs are quantized to the nearest entry in a learned codebook of embeddings. This enables the use of discrete representations for efficient compression and generation, and avoids issues present in standard VAEs.
 
 ---
 
 ## How VQ-VAE Works
 
-The process can be summarized in three main steps:
+### 1. Encoder
 
-1. **Encoder:**  
-   Maps the input \( x \) to a continuous latent vector \( z_e(x) \).
+The encoder maps input data $\( x \)$ to a latent representation $\( z_e(x) \)$.
 
-2. **Vector Quantization:**  
-   The encoder output \( z_e(x) \) is quantized to the closest codebook entry \( e_k \):
+### 2. Vector Quantization
 
-   \[
-   k^* = \arg\min_k \| z_e(x) - e_k \|_2
-   \]
-   \[
-   z_q(x) = e_{k^*}
-   \]
+The encoder output $\( z_e(x) \)$ is quantized to the nearest codebook entry $\( e_k \)$:
 
-   Here, the codebook \( \{e_1, e_2, ..., e_K\} \) contains \( K \) learnable vectors of dimension \( D \).
+$$
+k^* = \arg\min_k \| z_e(x) - e_k \|_2
+$$
 
-3. **Decoder:**  
-   The decoder takes the quantized codebook vector \( z_q(x) \) and attempts to reconstruct the original input \( \hat{x} \).
+$$
+z_q(x) = e_{k^*}
+$$
+
+Where the codebook is a learnable matrix of $\( K \)$ entries, each of dimension $\( D \)$.
+
+### 3. Decoder
+
+The decoder reconstructs the original input from the quantized latent $\( z_q(x) \)$.
 
 ---
 
 ## Losses in VQ-VAE
 
-The VQ-VAE loss function consists of:
+VQ-VAE uses a combination of three loss terms:
 
-### 1. **Reconstruction Loss**
+### 1. Reconstruction Loss
 
-Measures how well the output matches the input.
+This loss ensures that the reconstructed output is similar to the original input.
 
-\[
-\mathcal{L}_{\text{recon}} = \|x - \hat{x}\|_2^2
-\]
+ $$
+ \mathcal{L}_{\text{recon}} = \| x - \hat{x} \|_2^2
+ $$
 
-### 2. **Commitment Loss**
+### 2. Commitment Loss
 
-Encourages the encoder outputs to be close to their assigned codebook vector, preventing the encoder from drifting arbitrarily far from the discrete representation.
+Encourages the encoder outputs to stay close to their assigned codebook entry, stabilizing training and ensuring efficient codebook usage.
 
-\[
-\mathcal{L}_{\text{commit}} = \beta \| z_e(x) - \text{sg}[e_{k^*}] \|_2^2
-\]
 
-- Here, \(\beta\) is a hyperparameter (e.g., 0.25).
-- \(\text{sg}[\cdot]\) is the **stop-gradient** operation, ensuring this loss only updates the encoder.
 
-### 3. **Codebook Loss**
+  $$
+  \mathcal{L}_{\text{commit}} = \beta \| z_e(x) - \text{sg}[e_k^*] \|_2^2
+  $$
 
-Encourages each codebook entry to be close to the encoder outputs that use it, ensuring the codebook remains relevant and representative.
+Where:
+- $\beta$ is a hyperparameter.
+- $\text{sg}[\cdot]$ is the stop-gradient operator, meaning gradients do not flow through this argument.
+- $e_k^*$ is the nearest neighbor code.
 
-\[
-\mathcal{L}_{\text{codebook}} = \| \text{sg}[z_e(x)] - e_{k^*} \|_2^2
-\]
+### 3. Codebook Loss
 
-- Only the codebook entries receive gradients from this term.
+Directly updates the codebook vectors to move them toward the encoder outputs that select them.
 
-### **Total Loss**
+$$
+\mathcal{L}_{\text{codebook}} = \| \text{sg}[z_e(x)] - e_k^* \|_2^2
+$$
 
-\[
-\mathcal{L}_{\text{VQ-VAE}} = \mathcal{L}_{\text{recon}} + \mathcal{L}_{\text{codebook}} + \mathcal{L}_{\text{commit}}
-\]
+Where only the codebook entries are updated by this term.
+
+### Total Loss
+
+The total loss for VQ-VAE training is:
+
+ $$
+  L_{\text{VQ-VAE}} = L_{\text{recon}} + L_{\text{codebook}} + L_{\text{commit}}
+ $$
 
 ---
 
-### Why Commitment and Codebook Losses?
+## Why Commitment and Codebook Losses?
 
-- **Commitment loss** keeps the encoder outputs close to the codebook, encouraging stable and efficient usage of discrete representations.  
-- **Codebook loss** is essential because the quantization operation is non-differentiable. The encoder receives gradients via the straight-through estimator, but the codebook vectors themselves need explicit loss to move towards the encoder outputs.
+- **Commitment loss** is necessary because the straight-through estimator allows gradients to flow only to the encoder, not to the codebook. This term ensures the encoder outputs do not drift too far from the codebook vectors.
+- **Codebook loss** is needed to move the embedding vectors toward the encoder outputs that select them, since gradients do not pass through the non-differentiable quantization operation.
 
 ---
 
 ## Straight-Through Estimator (STE)
 
-The quantization step uses `argmin`, which is non-differentiable. Without special treatment, gradients cannot flow from the decoder through to the encoder. The **STE** is a practical trick that solves this:
+The quantization step involves an `argmin` operation, which is non-differentiable. The **Straight-Through Estimator** is a trick used to allow gradients to flow from the decoder to the encoder as if quantization was the identity function (i.e. like quantization was never there).  
+In code, this typically looks like:
 
-- **Forward pass:** Replace encoder output with the nearest codebook entry.
-- **Backward pass:** Copy the gradient from the decoder input back to the encoder output, as if quantization was an identity function.
-
-**STE in code:**
 ```python
 quantized = z_e + (quantized - z_e).detach()
+```
 
+
+This means that, in the backward pass, the gradient with respect to the quantized vector is copied directly to the encoder output.
+
+---
+
+## Reference
+- [Neural Discrete Representation Learning (VQ-VAE original paper)](https://arxiv.org/abs/1711.00937)
