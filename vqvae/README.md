@@ -71,7 +71,7 @@ $$
 \mathcal{L}_{\text{codebook}} = \Vert \text{sg}[z_e(x)] - e_k^* \Vert_2^2
 $$
 
-Where only the codebook entries are updated by this term.
+Only the codebook entries are updated by this term.
 
 ### Total Loss
 
@@ -80,6 +80,8 @@ The total loss for VQ-VAE training is:
  $$
   L_{\text{VQ-VAE}} = L_{\text{recon}} + L_{\text{codebook}} + L_{\text{commit}}
  $$
+
+The decoder optimizes only the first term (reconstruction loss), the encoder optimizes both the reconstruction and commitment losses, while the embeddings (the codebook) are optimized by the codebook loss.
 
 ---
 
