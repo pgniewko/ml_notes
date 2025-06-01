@@ -42,11 +42,15 @@ VQ-VAE uses a combination of three loss terms:
 
 ### 1. Reconstruction Loss
 
-This loss ensures that the reconstructed output is similar to the original input.
+This loss ensures that the reconstructed output is similar to the original input. 
+It is typically written as a mean squared error, **assuming a Gaussian (normal) distribution** for the reconstruction likelihood:
 
  $$
  \mathcal{L}_{\text{recon}} = \Vert x - \text{decoder}[z_q(x)] \Vert_2^2
  $$
+
+ This corresponds to maximizing the log-likelihood of the data under a normal distribution with fixed variance.
+ 
 
 ### 2. Commitment Loss
 
