@@ -1,10 +1,10 @@
 # PC Algorithm & Conditional Independence Tests — Comprehensive Tutorial
 
-This tutorial is a single, self-contained guide to the Peter–Clark (PC) algorithm, the fundamental causal concepts it relies on, and practical conditional independence (CI) tests for both discrete and continuous data. It ends with an apples-to-apples comparison on a nonlinear, non-Gaussian scenario.
+This tutorial is a self-contained guide to the Peter–Clark (PC) algorithm, the fundamental causal concepts it relies on, and practical conditional independence (CI) tests for both discrete and continuous data. It ends with an comparison on a nonlinear, non-Gaussian scenario.
 
 ---
 
-## 0) What the PC algorithm does (in one sentence)
+## 0) What the PC algorithm does
 
 Given observational data, PC learns as much of the causal graph as is identifiable by testing conditional independencies, pruning edges, then orienting some of the remaining ones to produce a CPDAG (a partially directed graph that represents an entire Markov equivalence class of DAGs).
 
@@ -311,11 +311,6 @@ Expected interpretation.
 - Multiple testing & alpha. PC runs many CI tests; consider false discovery control or stability selection in practice.
 - Sample size matters. Large conditioning sets can overfit; small cells in contingency tables can invalidate asymptotics.
 - Hidden confounding. Standard PC assumes causal sufficiency. If that’s dubious, consider FCI variants.
-
----
-
-## 9) What PC returns and why that’s OK
-PC outputs a CPDAG, not a single DAG. That’s the best you can do from observational data alone under the assumptions, because any DAG in the same Markov equivalence class implies the same CI pattern.
 
 ---
 
