@@ -7,4 +7,4 @@
 1. [Derivation of the Expectation–Maximization (EM) Algorithm for Gaussian Mixture Models (GMM)](https://github.com/pgniewko/ml_notes/tree/main/em_gmm)
 2. [Derivation of the Posteriors for Thompson Sampling](https://github.com/pgniewko/ml_notes/tree/main/ts)
 3. [Thoughts on the Vector Quantized Variational Autoencoder](./vqvae/)      
-4. [Independence tests in the Peter-Clark Algorithm](./pc/)
+4. [Peter-Clark Algorithm and conditional independence tests](./pc/)
