@@ -205,10 +205,3 @@ def partial_corr_test(X, Y, Z):
 Interpretation: small p ⇒ evidence against CI (dependence remains after regressing out Z). Assumptions: linearity and homoscedastic, approximately Gaussian residuals. Pitfalls: nonlinear relations (e.g., sin/cos), heteroskedasticity, outliers and heavy tails (Laplace/Cauchy). In such cases, prefer KCI or kNN CMI.
 
 ---
-
-## References
-
-- Spirtes, Glymour, Scheines. *Causation, Prediction, and Search* (2nd ed.).
-- Kalisch & Bühlmann (2007). *Estimating High-Dimensional DAGs with the PC-Algorithm*, JMLR.
-- Zhang et al. (2012). *Kernel-based Conditional Independence Test and Application in Causal Discovery* (UAI).
-- Koller & Friedman. *Probabilistic Graphical Models*.
