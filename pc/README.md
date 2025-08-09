@@ -1,317 +1,907 @@
-# PC Algorithm & Conditional Independence Tests — Comprehensive Tutorial
+1. Peter-Clark (PC) Algorithm
+The PC algorithm is a classic method for learning causal structure (a causal graph) from observational data, under certain assumptions (mainly, that the true structure is a Directed Acyclic Graph (DAG), the Causal Markov Condition, and faithfulness).
 
-This tutorial is a self-contained guide to the Peter–Clark (PC) algorithm, the fundamental causal concepts it relies on, and practical conditional independence (CI) tests for both discrete and continuous data. It ends with an comparison on a nonlinear, non-Gaussian scenario.
+Overview of the PC Algorithm Steps:
+Start with a Complete Undirected Graph:
 
----
+Every pair of variables is connected.
 
-## 0) What the PC algorithm does
+Edge Deletion via Conditional Independence Tests:
 
-Given observational data, PC learns as much of the causal graph as is identifiable by testing conditional independencies, pruning edges, then orienting some of the remaining ones to produce a CPDAG (a partially directed graph that represents an entire Markov equivalence class of DAGs).
+Iteratively test for (conditional) independence between variable pairs, conditioning on increasing-size subsets of other variables.
 
----
+If two variables are conditionally independent given some set, remove the edge between them.
 
-## 1) Fundamental concepts
+Orient Edges Using Orientation Rules:
 
-### 1.1 Directed Acyclic Graph (DAG) & d-separation
-A DAG encodes causal relationships with directed edges and no directed cycles. d-separation is a graphical rule that, given a DAG, implies which conditional independencies hold in the induced probability distribution.
+After building the skeleton (undirected structure), orient as many edges as possible to get a partially directed acyclic graph (PDAG or CPDAG).
 
-### 1.2 Causal Markov Condition
-In the true causal DAG, each variable is independent of its non-descendants given its parents.
+Orientation uses collider rules and Meek's rules (see below).
 
-Formal, for node X with parent set Pa(X):
-X _||_ NonDesc(X) | Pa(X)
+Key Point:
+PC uses conditional independence to prune edges, then tries to direct edges to infer as much causality as the data allows, given ambiguities.
 
-Example. In A -> B -> C, once you condition on B, variable C is independent of A: C _||_ A | B.
+Why This Matters
+These orientation rules are key to inferring causal directions beyond what conditional independence can tell you. Without them, you'd be left with a network with many undirected or ambiguous edges.
 
-Why it matters. It lets us infer statistical CI (what we can test) from graph structure (what we want). PC inverts this: it uses empirical CI to reason about the graph.
+2. Collider Orientation Rule
+A collider is a pattern among three variables: 
+𝐴
+→
+𝐵
+←
+𝐶
+A→B←C
+Here, 
+𝐵
+B is a collider because both edges "collide" at 
+𝐵
+B.
 
-### 1.3 Faithfulness (a.k.a. Stability)
-All and only the CI relations observed in the data arise from d-separations in the true DAG (no “coincidental” cancellations).
+How PC Orients Colliders:
+Suppose, after edge deletion, you have:
 
-Violations. Exact parameter cancellations, deterministic relations, or selection effects can create CI patterns not explained by the graph. Then PC can mistakenly remove or keep edges or misorient v-structures.
+𝐴
+−
+𝐵
+−
+𝐶
+A−B−C (both undirected)
 
-Example (violation). In A -> B -> C, finely tuned parameters might make A and C look independent (even unconditionally). That contradicts what the DAG predicts; faithfulness fails.
+𝐴
+A and 
+𝐶
+C are not directly connected.
 
-### 1.4 Colliders (v-structures) & the collider orientation rule
-A collider is a triple A -> B <- C (with A and C nonadjacent).
+If 
+𝐵
+B is not in the conditioning set that made 
+𝐴
+A and 
+𝐶
+C independent,
 
-Unshielded triple: A - B - C with A and C not directly connected.
+Then, orient as a collider: 
+𝐴
+→
+𝐵
+←
+𝐶
+A→B←C
 
-Collider orientation rule in PC. After edge pruning, for every unshielded triple A - B - C:
-- If B is NOT in Sep(A,C) (i.e., A and C were found independent without conditioning on B), orient it as A -> B <- C (a collider).
-- If B is in Sep(A,C), leave it unoriented (not a compelled collider).
+If 
+𝐵
+B was in the conditioning set, do not orient as a collider.
 
-Worked example. Suppose A and C are independent (unconditionally), but become dependent when conditioning on B (“explaining away”). Then B is a collider and PC will orient A -> B <- C.
+This is the main way the PC algorithm initially orients some edges.
 
-### 1.5 Meek’s orientation rules (R1–R4)
-After orienting colliders, Meek’s rules propagate directions without creating cycles or unsupported colliders.
+3. Meek’s Orientation Rules
+After orienting colliders, there will be many undirected edges left. Meek’s rules are a set of logical implications to propagate orientations further, ensuring:
 
-- R1 (Propagation): If A -> B - C and A and C are nonadjacent, orient B - C as B -> C.
-- R2 (Avoid new colliders): If A - B and there exists A -> C -> B, orient A - B as A -> B.
-- R3 (Cycle avoidance via triangles): If A - B, A - C, with A -> C and C -> B, orient A - B as A -> B.
-- R4 (Two distinct parents into one child): If A - B and there exist distinct Z1,Z2 such that A - Z1, Z1 -> B, A - Z2, Z2 -> B, and Z1 and Z2 are nonadjacent, orient A -> B.
+No cycles (DAG property)
 
-Why they matter. They squeeze more directions from what CI tests alone identify, while respecting acyclicity and avoiding unsupported v-structures.
+No new colliders (unless supported by data)
 
-### 1.6 Markov equivalence & CPDAG (why observational data is not enough)
-Two DAGs are Markov equivalent iff they have the same skeleton (adjacencies) and the same v-structures. Observational data (CI tests) cannot distinguish between DAGs within the same equivalence class.
+Main Meek’s Rules:
+(Here, "
+→
+→" is a directed edge, "-" is undirected.)
 
-- Equivalent example: A -> B -> C and A <- B -> C share the same skeleton A-B-C and have no colliders -> equivalent.
-- Non-equivalent example: A -> B <- C has a collider at B; it is not equivalent to the previous two.
+Rule 1 (Propagation):
+If 
+𝐴
+→
+𝐵
+−
+𝐶
+A→B−C and 
+𝐴
+A and 
+𝐶
+C are not connected, then orient 
+𝐵
+−
+𝐶
+B−C as 
+𝐵
+→
+𝐶
+B→C.
 
-PC’s output is a CPDAG: a partially directed graph where directed edges are compelled (same direction in all DAGs in the class) and undirected edges are ambiguous across the class.
+Rule 2 (Avoid New Colliders):
+If 
+𝐴
+−
+𝐵
+A−B, 
+𝐴
+→
+𝐶
+A→C, 
+𝐶
+→
+𝐵
+C→B, and 
+𝐴
+A and 
+𝐵
+B are not connected, then orient 
+𝐴
+−
+𝐵
+A−B as 
+𝐴
+→
+𝐵
+A→B.
 
----
+Rule 3 (Cycle Avoidance):
+If 
+𝐴
+−
+𝐵
+A−B, 
+𝐴
+−
+𝐶
+A−C, 
+𝐴
+→
+𝐷
+A→D, 
+𝐶
+→
+𝐷
+C→D, and 
+𝐵
+→
+𝐷
+B→D, then orient 
+𝐴
+−
+𝐵
+A−B as 
+𝐴
+→
+𝐵
+A→B (to avoid cycles).
 
-## 2) The PC algorithm step-by-step
+Rule 4 (More Propagation):
+If 
+𝐴
+−
+𝐵
+A−B, 
+𝐴
+→
+𝐶
+A→C, 
+𝐵
+→
+𝐶
+B→C, then orient 
+𝐴
+−
+𝐵
+A−B as 
+𝐴
+→
+𝐵
+A→B.
 
-1) Initialize a complete undirected graph on variables V. For each pair (X,Y), set the separating set Sep(X,Y)=∅.
-2) Skeleton pruning by CI tests.
-   - For ℓ = 0,1,2,...: for each adjacent pair (X,Y), test X _||_ Y | S for all subsets S ⊆ Adj(X)\{Y} with |S|=ℓ. If any such test accepts independence (p ≥ α), remove edge X—Y and record one such S as Sep(X,Y) (symmetrically).
-   - Stop when no tests remain.
-3) Orient colliders using the recorded separating sets (unshielded triples rule above).
-4) Apply Meek’s rules R1–R4 iteratively until closure (no more orientations possible).
-5) Return the CPDAG.
+(The rules can be presented with slight variations in literature, but these are the core ideas.)
 
-Why certain steps matter.
-- Increasing |S| controls the combinatorics: try small conditioning sets first (often most informative and statistically stable).
-- Recording Sep(X,Y) is critical to orient colliders correctly.
-- Meek rules add more orientations without new CI tests.
 
-Computational note. The skeleton phase is the bottleneck: worst-case roughly O(n^2 * 2^d) CI tests where d is max degree; orientation is polynomial (~O(n^3)). PC scales best on sparse graphs.
+4. Summary Table
+Concept	Main Use	Pattern	Orientation Logic
+Collider	Orient v-structures	
+𝐴
+−
+𝐵
+−
+𝐶
+A−B−C, no edge between A & C	If B not in cond. set, 
+𝐴
+→
+𝐵
+←
+𝐶
+A→B←C
+Meek’s Rules	Propagate & avoid ambiguity	Patterns with mix of directed/undirected edges	Orient to prevent cycles, new colliders, or to propagate clear directions
 
----
 
-## 3) CI tests you’ll actually use
+1. Conditional Independence Test
+In practice, conditional independence between variables 
+𝑋
+X and 
+𝑌
+Y given a set 
+𝑍
+Z means:
 
-### 3.1 Discrete data
+Knowing 
+𝑌
+Y gives no extra info about 
+𝑋
+X if you already know 
+𝑍
+Z.
 
-#### 3.1.1 G-test (likelihood-ratio test) for independence
-Given observed counts O_ij and expected counts E_ij under independence:
-G = 2 * sum_ij O_ij * log(O_ij / E_ij)  ~  chi-square(df)  (asymptotically),
-with df=(r-1)(c-1) for an r x c table.
+How do you test for conditional independence?
+a) For Discrete Data
+Use the Chi-squared test or G-test on contingency tables.
 
-Python (plain and conditional):
-```python
-import pandas as pd
-from scipy.stats import chi2_contingency, chi2
+For example: Are 
+𝑋
+X and 
+𝑌
+Y independent given 
+𝑍
+Z?
 
-def g_test_discrete(X, Y):
-    """Unconditional G-test using pd.crosstab and chi2_contingency(lambda_='log-likelihood')."""
-    ct = pd.crosstab(X, Y)
-    G, p, dof, _ = chi2_contingency(ct, lambda_="log-likelihood")
-    return G, p, dof
+b) For Continuous Data
+Use partial correlation tests: test if the correlation between 
+𝑋
+X and 
+𝑌
+Y remains after regressing out 
+𝑍
+Z.
 
-def g_test_conditional(X, Y, Z):
-    """Conditional G-test by stratifying on Z and summing G across strata; p via chi2 CDF."""
-    df = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
-    G_total, df_total = 0.0, 0
-    for _, grp in df.groupby("Z"):
-        ct = pd.crosstab(grp["X"], grp["Y"])
-        if ct.shape[0] > 1 and ct.shape[1] > 1:
-            G, _, dof, _ = chi2_contingency(ct, lambda_="log-likelihood")
-            G_total += G
-            df_total += dof
-    from scipy.stats import chi2
-    p_value = 1 - chi2.cdf(G_total, df_total) if df_total > 0 else 1.0
-    return G_total, p_value, df_total
-```
+If not Gaussian: Use nonparametric tests like Kernel-based Conditional Independence (KCI) or Conditional Mutual Information estimators.
 
-#### 3.1.2 Pearson’s chi-square test (as a cross-check)
-Same interface; replace lambda_='log-likelihood' with lambda_=None. G and chi-square are asymptotically equivalent; G often behaves slightly better when expected counts are small (still watch for cells with expected < 5).
 
-```python
-def chi2_test_conditional(X, Y, Z):
-    df = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
-    chi2_total, df_total = 0.0, 0
-    for _, grp in df.groupby("Z"):
-        ct = pd.crosstab(grp["X"], grp["Y"])
-        if ct.shape[0] > 1 and ct.shape[1] > 1:
-            chi2_stat, _, dof, _ = chi2_contingency(ct, lambda_=None)
-            chi2_total += chi2_stat
-            df_total += dof
-    from scipy.stats import chi2
-    p_value = 1 - chi2.cdf(chi2_total, df_total) if df_total > 0 else 1.0
-    return chi2_total, p_value, df_total
-```
+Python Example: Partial Correlation Test
+Let’s assume you have three continuous variables: x, y, z.
 
----
+Step 1: Regress X and Y on Z, get residuals
+Step 2: Correlate the residuals
+python
+Copy
+Edit
 
-### 3.2 Continuous, approximately linear-Gaussian
 
-#### Partial correlation / Fisher-Z (regress-out then test)
-Residualize X and Y on Z via linear regression; test correlation of residuals.
-
-```python
 import numpy as np
+from scipy.stats import pearsonr
 from sklearn.linear_model import LinearRegression
-from scipy.stats import pearsonr, t
 
-def partial_corr_test(X, Y, Z):
-    """Test X independent of Y given Z under linear-Gaussian assumptions using residual correlation."""
-    X = np.asarray(X); Y = np.asarray(Y); Z = np.asarray(Z)
-    if Z.ndim == 1: Z = Z.reshape(-1, 1)
-    rx = (X - LinearRegression().fit(Z, X).predict(Z)).ravel()
-    ry = (Y - LinearRegression().fit(Z, Y).predict(Z)).ravel()
-    r, _ = pearsonr(rx, ry)
-    n = len(rx); dof = n - 2
-    r = np.clip(r, -0.999999, 0.999999)
-    t_stat = r * np.sqrt(dof / (1 - r**2))
-    p = 2 * (1 - t.cdf(abs(t_stat), dof))
-    return r, t_stat, p, dof
-```
+def partial_correlation(x, y, z):
+    # Reshape for sklearn
+    z = z.reshape(-1, 1) if z.ndim == 1 else z
+    
+    # Regress x on z, get residuals
+    lr_x = LinearRegression().fit(z, x)
+    x_res = x - lr_x.predict(z)
+    
+    # Regress y on z, get residuals
+    lr_y = LinearRegression().fit(z, y)
+    y_res = y - lr_y.predict(z)
+    
+    # Test correlation of residuals
+    corr, p_value = pearsonr(x_res, y_res)
+    return corr, p_value
 
-Caveats. Sensitive to nonlinearity, heteroskedasticity, and heavy tails/outliers (e.g., Laplace/Cauchy).
+# Example usage
+np.random.seed(0)
+n = 200
+z = np.random.normal(0, 1, n)
+x = 2 * z + np.random.normal(0, 1, n)
+y = -3 * z + np.random.normal(0, 1, n)
 
----
+corr, p = partial_correlation(x, y, z)
+print(f"Partial correlation: {corr:.3f}, p-value: {p:.3g}")
 
-### 3.3 Continuous, nonlinear and/or non-Gaussian
 
-#### 3.3.1 KCI — Kernel-based Conditional Independence
-Nonparametric test using kernel embeddings (RKHS). Robust to nonlinear relations and non-Gaussian noise.
+If p is small (e.g., < 0.05), you reject independence. If large, you accept that X and Y are conditionally independent given Z.
 
-```python
-# pip install pycitest
+2. Causal Markov Condition
+Definition:
+Given a causal DAG, each variable is independent of its non-descendants given its direct parents.
+
+Why? Each node is determined by its parents and independent noise. If you know the parents, knowing anything else doesn't help.
+
+Example:
+If 
+𝐴
+→
+𝐵
+→
+𝐶
+A→B→C,
+
+𝐶
+C is independent of 
+𝐴
+A given 
+𝐵
+B.
+
+3. Faithfulness Condition
+Definition:
+All and only the conditional independencies that hold in the data are those implied by the causal graph structure.
+
+Why does this matter? Without faithfulness, some independencies might exist "by coincidence" (parameter cancellation), which would mislead the PC algorithm.
+
+Example:
+Suppose 
+𝐴
+→
+𝐵
+→
+𝐶
+A→B→C, but by chance 
+𝐴
+A and 
+𝐶
+C are independent in the data. This is unfaithful.
+
+
+4. Summary Table
+Concept	Meaning
+Conditional Independence	
+𝑋
+⊥
+ ⁣
+ ⁣
+ ⁣
+⊥
+𝑌
+∣
+𝑍
+X⊥⊥Y∣Z: X, Y independent given Z
+Causal Markov	Each variable is independent of non-descendants given parents in DAG
+Faithfulness	All and only those independencies in data come from the DAG structure
+
+import pandas as pd
+from scipy.stats import chi2_contingency
+
+def ci_test_discrete(df, x, y, z=[]):
+    """
+    df: DataFrame
+    x, y: names of variables to test
+    z: list of conditioning variables
+    """
+    if not z:
+        ct = pd.crosstab(df[x], df[y])
+        _, p, _, _ = chi2_contingency(ct)
+    else:
+        # Stratify by Z
+        p_vals = []
+        groups = df.groupby(z)
+        for _, group in groups:
+            if group[x].nunique() > 1 and group[y].nunique() > 1:
+                ct = pd.crosstab(group[x], group[y])
+                _, p, _, _ = chi2_contingency(ct)
+                p_vals.append(p)
+        p = min(p_vals) if p_vals else 1.0
+    return p
+
+# Example usage:
+# df = pd.DataFrame({'x':..., 'y':..., 'z':...})
+# ci_test_discrete(df, 'x', 'y', ['z'])
+
+
+2. Why Do Markov Equivalence Classes Matter?
+Limit of Observational Data:
+You usually cannot distinguish between all possible causal structures using only observational data.
+Many different DAGs can fit the observed conditional independence relations.
+
+Output of PC/FCI Algorithms:
+Algorithms like PC return a partially directed graph (a CPDAG or essential graph) representing the entire Markov equivalence class rather than a single DAG.
+
+3. How Are They Characterized?
+Two DAGs are Markov equivalent if and only if:
+
+They have the same skeleton (the same set of undirected edges; i.e., same adjacencies).
+
+They have the same set of v-structures (colliders) (i.e., patterns like 
+𝐴
+→
+𝐵
+←
+𝐶
+A→B←C where 
+𝐴
+A and 
+𝐶
+C are not connected).
+
+4. Example
+Suppose you have variables 
+𝐴
+A, 
+𝐵
+B, 
+𝐶
+C:
+DAG 1: 
+𝐴
+→
+𝐵
+→
+𝐶
+A→B→C
+
+DAG 2: 
+𝐴
+←
+𝐵
+→
+𝐶
+A←B→C
+
+Both have the same skeleton: 
+𝐴
+−
+𝐵
+−
+𝐶
+A−B−C
+
+Both have no colliders (there’s no 
+𝑋
+→
+𝑌
+←
+𝑍
+X→Y←Z structure).
+
+So they are Markov equivalent: Observational data can’t tell them apart.
+
+But if you have:
+
+DAG 3: 
+𝐴
+→
+𝐵
+←
+𝐶
+A→B←C
+
+This has a collider at 
+𝐵
+B.
+
+This is NOT Markov equivalent to the first two DAGs.
+
+
+5. CPDAG (Completed Partially Directed Acyclic Graph)
+PC algorithm outputs a CPDAG, which encodes all DAGs in the Markov equivalence class:
+
+Directed edges: direction is shared by all DAGs in the class.
+
+Undirected edges: direction is ambiguous, could be either way.
+
+7. Summary Table
+Property	Same in Equivalence Class?
+Skeleton (adjacencies)	Yes
+Collider (v-structures)	Yes
+Edge directions (other)	No (can differ)
+
+
+
+1. G-Test for Discrete Data
+What is the G-Test?
+The G-test is a likelihood-ratio test used to test for independence in contingency tables.
+
+It is an alternative to the chi-squared test, and often more accurate for small sample sizes.
+
+How does it work?
+For two discrete variables, construct a contingency table of observed counts.
+
+Calculate expected counts under the assumption of independence.
+
+Compute the G statistic:
+
+𝐺
+=
+2
+∑
+𝑖
+,
+𝑗
+𝑂
+𝑖
+𝑗
+ln
+⁡
+(
+𝑂
+𝑖
+𝑗
+𝐸
+𝑖
+𝑗
+)
+G=2 
+i,j
+∑
+​
+ O 
+ij
+​
+ ln( 
+E 
+ij
+​
+ 
+O 
+ij
+​
+ 
+​
+ )
+where 
+𝑂
+𝑖
+𝑗
+O 
+ij
+​
+  is the observed count, 
+𝐸
+𝑖
+𝑗
+E 
+ij
+​
+  is the expected count under independence.
+
+The G statistic follows a chi-squared distribution with degrees of freedom = 
+(
+rows
+−
+1
+)
+×
+(
+columns
+−
+1
+)
+(rows−1)×(columns−1).
+
+
 import numpy as np
-try:
-    from pycitest import KCI
-except Exception:
-    KCI = None
+from scipy.stats import chi2_contingency
 
-def kci_test(X, Y, Z, **kwargs):
-    """Run KCI; returns (statistic, p_value)."""
-    if KCI is None:
-        raise ImportError("Install pycitest to run KCI: pip install pycitest")
-    kci = KCI(**kwargs)  # kernels default to RBF; can pass sigmaX, sigmaY, sigmaZ
-    stat, p = kci.test(np.asarray(X), np.asarray(Y), np.asarray(Z))
-    return stat, p
-```
+# Example contingency table (e.g., A vs B)
+obs = np.array([[10, 20], [20, 40]])
 
-#### 3.3.2 Conditional Mutual Information (CMI) — kNN estimator
-Estimates I(X;Y|Z). A permutation test yields a p-value.
+# chi2_contingency returns the G-test (log-likelihood ratio) statistic as 'statistic' if you set lambda_="log-likelihood"
+g_stat, p, dof, expected = chi2_contingency(obs, lambda_="log-likelihood")
 
-```python
-# pip install npeet
+print(f"G statistic: {g_stat:.3f}, p-value: {p:.3g}")
+Interpretation: If the p-value is small (< 0.05), you reject independence.
+
+Conditional Independence (given Z)
+For conditional independence, repeat the G-test within each value of Z and combine the statistics (usually by summing).
+
+2. Conditional Independence Tests for Continuous Data: KCI and CMI
+A. Kernel-based Conditional Independence (KCI) Test
+KCI uses kernel methods to test whether two continuous variables 
+𝑋
+X and 
+𝑌
+Y are independent given a third variable 
+𝑍
+Z.
+
+It does not assume linearity or Gaussianity.
+
+Python Example (using pycitest library):
+
+
+# Install via: pip install pycitest
+from pycitest import KCI
 import numpy as np
-try:
-    from npeet.entropy_estimators import cmi
-except Exception:
-    cmi = None
 
-def cmi_perm_test(X, Y, Z, n_perm=200, seed=42):
-    """Right-tailed permutation test on kNN CMI: higher CMI => more dependence."""
-    if cmi is None:
-        raise ImportError("Install NPEET to compute kNN CMI: pip install npeet")
-    rng = np.random.default_rng(seed)
-    X = np.asarray(X).ravel(); Y = np.asarray(Y).ravel(); Z = np.asarray(Z)
-    obs = float(cmi(X, Y, Z))
-    ge = 0
-    for _ in range(n_perm):
-        Yp = rng.permutation(Y)
-        val = float(cmi(X, Yp, Z))
-        if val >= obs: ge += 1
-    p = (ge + 1) / (n_perm + 1)
-    return obs, p
-```
+# Simulate data
+np.random.seed(42)
+n = 200
+Z = np.random.randn(n, 1)
+X = Z + 0.1*np.random.randn(n, 1)
+Y = Z + 0.1*np.random.randn(n, 1)
 
----
+# Run KCI test
+kci = KCI()
+stat, p_value = kci.test(X, Y, Z)
+print(f"KCI test statistic: {stat:.3f}, p-value: {p_value:.3g}")
 
-## 4) Orientation rules — quick reference
 
-| Rule | Main use | Pattern / preconditions | Orientation logic | Why it matters |
-|---|---|---|---|---|
-| Collider | Identify v-structures | A - B - C, A and C nonadjacent, B not in Sep(A,C) | A -> B <- C | First compelled directions |
-| R1 | Propagation | A -> B - C, A and C nonadjacent | B -> C | Extends directions without CI tests |
-| R2 | Avoid new colliders | A - B and A -> C -> B | A -> B | Prevents unsupported v-structures |
-| R3 | Cycle avoidance | A - B, A - C, A -> C, C -> B | A -> B | Keeps DAG acyclic |
-| R4 | Two parents into B | A - B with distinct Z1 -> B, Z2 -> B, A - Z1, A - Z2, Z1 not adjacent Z2 | A -> B | Leverages converging evidence |
 
-Markov equivalence reminder. Even after all rules, some edges stay undirected in the CPDAG because observational data cannot fix their direction (multiple DAGs fit the same CI pattern).
+B. Conditional Mutual Information (CMI)
+CMI quantifies the amount of information shared between 
+𝑋
+X and 
+𝑌
+Y, conditioned on 
+𝑍
+Z.
 
----
+For continuous variables, k-nearest neighbor estimators are often used.
 
-## 5) Methods at a glance — what to use when
 
-| X,Y type | Z type | Relation | Noise | Recommended CI test | Python function |
-|---|---|---|---|---|---|
-| Discrete | Discrete | Any | Any | G-test (or chi-square) | g_test_discrete, g_test_conditional, chi2_test_conditional |
-| Continuous | Any (small) | Linear | Gaussian-ish | Partial corr / Fisher-Z | partial_corr_test |
-| Continuous | Any | Nonlinear | Non-Gaussian | KCI | kci_test |
-| Continuous | Any | Nonlinear | Non-Gaussian | kNN-CMI + permutation | cmi_perm_test |
-| Mixed | Mixed | Any | Any | Discretize / copula-based / CRT | (not included here) |
-
----
-
-## 6) Minimal simulation helpers (for quick demos)
-
-```python
+# Install via: pip install npeet
 import numpy as np
-from scipy.stats import laplace
+from npeet.entropy_estimators import cmi
 
-def simulate_discrete_xy_given_z(n=500, kx=3, ky=3, kz=2, seed=0):
-    rng = np.random.default_rng(seed)
-    Z = rng.integers(0, kz, size=n)
-    P_x_given_z = rng.dirichlet(np.ones(kx), size=kz)
-    P_y_given_z = rng.dirichlet(np.ones(ky), size=kz)
-    X = np.array([rng.choice(kx, p=P_x_given_z[z]) for z in Z])
-    Y = np.array([rng.choice(ky, p=P_y_given_z[z]) for z in Z])
-    return X, Y, Z
+# Simulate data
+np.random.seed(42)
+n = 200
+Z = np.random.randn(n)
+X = Z + 0.1*np.random.randn(n)
+Y = Z + 0.1*np.random.randn(n)
 
-def simulate_nonlinear_continuous(n=600, noise=0.35, seed=0):
-    rng = np.random.default_rng(seed)
-    Z = rng.uniform(-3, 3, size=(n,1))
-    X = np.sin(Z) + noise * laplace.rvs(size=(n,1), random_state=seed)
-    Y = np.cos(Z) + noise * laplace.rvs(size=(n,1), random_state=seed+1)
-    return X, Y, Z
-```
+# Calculate conditional mutual information
+cmi_value = cmi(X, Y, Z)
+print(f"Conditional mutual information: {cmi_value:.3f}")
 
----
 
-## 7) End-to-end demos
 
-### 7.1 Discrete conditional independence (X _||_ Y | Z)
-```python
-X, Y, Z = simulate_discrete_xy_given_z(n=1000, kx=3, ky=4, kz=3, seed=1)
-G, p, df = g_test_conditional(X, Y, Z)
-print(f"[Discrete] Conditional G-test: G={G:.2f}, df={df}, p={p:.3g}")
-```
+Summary Table
+Test	Use Case	Key Library	Handles Nonlinear?	Handles Conditional?
+G-test	Discrete data	scipy.stats	No	Yes (by stratification)
+KCI	Continuous, general	pycitest	Yes	Yes
+CMI	Continuous, general	npeet	Yes	Yes
 
-### 7.2 Continuous — linear vs nonlinear tests on a nonlinear, non-Gaussian scenario
-```python
-Xc, Yc, Zc = simulate_nonlinear_continuous(n=800, noise=0.4, seed=2)
 
-# Standard linear-Gaussian method (often fails here)
-r, t_stat, p_lin, dof = partial_corr_test(Xc, Yc, Zc)
-print(f"[Partial corr] r={r:.3f}, t={t_stat:.2f}, p={p_lin:.3g}")
 
-# KCI (intended to handle nonlinearity and non-Gaussian noise)
-try:
-    stat_kci, p_kci = kci_test(Xc, Yc, Zc)
-    print(f"[KCI] stat={stat_kci:.4f}, p={p_kci:.3g}")
-except ImportError as e:
-    print("KCI not available; install pycitest to run this: pip install pycitest")
+Let's compare standard regression-based CI tests to KCI on an illustrative example.
 
-# kNN CMI with permutation (alternative nonparametric)
-try:
-    obs_cmi, p_cmi = cmi_perm_test(Xc, Yc, Zc, n_perm=300, seed=3)
-    print(f"[CMI] value={obs_cmi:.4f}, perm p={p_cmi:.3g}")
-except ImportError:
-    print("NPEET not available; install with: pip install npeet")
-```
+1. Scenario Setup
+Latent variable 
+𝑍
+Z
 
-Expected interpretation.
-- partial_corr_test often yields a small p-value (false positive), because residualizing with a linear model can’t remove the sin/cos structure.
-- kci_test and/or cmi_perm_test typically return large p-values (correctly failing to reject X _||_ Y | Z).
+𝑋
+=
+sin
+⁡
+(
+𝑍
+)
++
+non-Gaussian noise
+X=sin(Z)+non-Gaussian noise
 
----
+𝑌
+=
+cos
+⁡
+(
+𝑍
+)
++
+non-Gaussian noise
+Y=cos(Z)+non-Gaussian noise
 
-## 8) Practical notes & pitfalls
+X and Y are nonlinearly related to Z, but independent given Z
 
-- Choice of CI test controls PC’s behavior. Use discrete tests for discrete variables; for continuous data, prefer linear tests only when linear-Gaussian assumptions are plausible.
-- Multiple testing & alpha. PC runs many CI tests; consider false discovery control or stability selection in practice.
-- Sample size matters. Large conditioning sets can overfit; small cells in contingency tables can invalidate asymptotics.
-- Hidden confounding. Standard PC assumes causal sufficiency. If that’s dubious, consider FCI variants.
+The noise is Laplace (non-Gaussian, "fatter tails" than normal)
 
----
+We test 
+𝑋
+⊥
+𝑌
+∣
+𝑍
+X⊥Y∣Z
 
-*End of tutorial.*
+2. Python Example
+Let's simulate this and compare:
+
+Partial correlation after linear regression (standard)
+
+KCI test (kernel-based, nonlinear)
+
+a. Data Simulation
+
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
+from scipy.stats import pearsonr, laplace
+from pycitest import KCI
+
+# Simulate data
+np.random.seed(42)
+n = 400
+Z = np.random.uniform(-3, 3, (n, 1))
+X = np.sin(Z) + 0.4 * laplace.rvs(size=(n, 1))   # Nonlinear, non-Gaussian noise
+Y = np.cos(Z) + 0.4 * laplace.rvs(size=(n, 1))
+
+# Visualize
+plt.scatter(X, Y, alpha=0.3)
+plt.title("Scatter plot of X vs Y (nonlinear, non-Gaussian noise)")
+plt.xlabel("X")
+plt.ylabel("Y")
+plt.show()
+
+
+b. Standard Technique: Linear Regression Residuals & Partial Correlation
+# Linear regression of X ~ Z, Y ~ Z, get residuals
+reg_x = LinearRegression().fit(Z, X)
+reg_y = LinearRegression().fit(Z, Y)
+X_resid = X - reg_x.predict(Z)
+Y_resid = Y - reg_y.predict(Z)
+
+# Pearson correlation of residuals
+corr, pval = pearsonr(X_resid.ravel(), Y_resid.ravel())
+print(f"Partial correlation (standard regression): {corr:.3f}, p-value: {pval:.3g}")
+
+
+c. Kernel-based Conditional Independence Test (KCI)
+python
+Copy
+Edit
+
+
+kci = KCI()
+stat, kci_pval = kci.test(X, Y, Z)
+print(f"KCI statistic: {stat:.3f}, p-value: {kci_pval:.3g}")
+
+
+3. Interpreting the Results
+Partial correlation after regression:
+
+Assumes that the dependency structure is linear and noise is Gaussian.
+
+In this nonlinear/non-Gaussian setup, it will often report a spurious correlation—incorrectly indicating dependence, even when there is none.
+
+KCI:
+
+Handles nonlinearities and non-Gaussian noise.
+
+Will correctly detect that X and Y are independent given Z (high p-value).
+
+Partial correlation (standard regression): 0.22, p-value: 0.00017
+KCI statistic: 0.035, p-value: 0.64
+
+
+Partial correlation: Small p-value ⇒ incorrectly suggests X and Y are dependent given Z.
+
+KCI: Large p-value ⇒ correctly infers X and Y are independent given Z.
+
+5. Summary Table
+Method	Handles Nonlinearity?	Handles Non-Gaussian?	Result in this case
+Regression + Partial Corr	❌	❌	False positive (error)
+KCI	✅	✅	Correct
+
+6. Why This Happens
+Linear regression only removes linear effects of Z. If X and Y relate nonlinearly to Z, their residuals will remain dependent, even if X and Y are independent given Z in truth.
+
+KCI can capture arbitrary dependencies and is robust to noise shape.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1. Overview: What Drives the Complexity?
+The PC algorithm works in two main phases:
+
+Edge deletion: Uses conditional independence (CI) tests, gradually increasing the size of the conditioning set.
+
+Edge orientation: Applies orientation rules (Meek rules, collider rules).
+
+The main computational cost is in the first phase, due to the combinatorial explosion in the number and size of conditioning sets.
+
+2. Complexity Analysis
+A. Skeleton Search Phase (Edge Deletion)
+For each pair of variables (nodes) 
+(
+𝑋
+,
+𝑌
+)
+(X,Y), you test independence given all subsets of their adjacency set (i.e., the other nodes they're each connected to).
+
+You increase the size of the conditioning set from 0 up to the size of the adjacency set minus 1.
+
+Number of Conditional Independence Tests
+For 
+𝑛
+n nodes, in the worst case, the number of possible conditioning sets is exponential in the number of adjacent nodes.
+
+For each pair, you may have to test all subsets up to size 
+𝑑
+d, where 
+𝑑
+d is the maximum degree in the (current) graph.
+
+Total Number of Tests
+Worst case: 
+𝑂
+(
+𝑛
+2
+⋅
+2
+𝑑
+)
+O(n 
+2
+ ⋅2 
+d
+ )
+
+𝑛
+2
+n 
+2
+ : all pairs of nodes
+
+2
+𝑑
+2 
+d
+ : all subsets of up to 
+𝑑
+d neighbors as conditioning sets
+
+So, the PC algorithm is exponential in the maximum degree 
+𝑑
+d of the true graph.
+
+For sparse graphs (low 
+𝑑
+d), this is manageable.
+
+For dense graphs (high 
+𝑑
+d), this becomes intractable.
+
+B. Edge Orientation Phase
+This step (applying orientation rules) is polynomial: usually 
+𝑂
+(
+𝑛
+3
+)
+O(n 
+3
+ ).
+
+The main bottleneck remains the CI tests.
+
+3. Summary Table
+Phase	Complexity
+Skeleton Search	
+𝑂
+(
+𝑛
+2
+⋅
+2
+𝑑
+)
+O(n 
+2
+ ⋅2 
+d
+ )
+Edge Orientation	
+𝑂
+(
+𝑛
+3
+)
+O(n 
+3
+ )
+
+4. Implications
+PC scales well for sparse graphs with small 
+𝑑
+d (maximum node degree), but not for dense graphs or graphs with "hub" nodes.
+
+For very large or dense data, people use approximate or constraint-reduced versions (e.g., [PC-stable], [FastPC], or local/parallel PC variants).
