@@ -1,4 +1,4 @@
-# PC Algorithm Tutorial (Peter–Clark)
+# Peter–Clark Algorithm Tutorial
 
 A concise, practical guide to the PC algorithm for learning causal structure from observational data.
 
