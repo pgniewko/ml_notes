@@ -5,11 +5,13 @@ A concise, practical guide to the PC algorithm for learning causal structure fro
 ---
 
 ## Table of Contents
+- [0. Notation](#0-notation)
 - [1. Assumptions](#1-assumptions)
   - [1.1 Causal Markov Condition](#11-causal-markov-condition)
   - [1.2 Faithfulness](#12-faithfulness)
-- [2. Markov Equivalence & CPDAGs](#2-markov-equivalence--cpdags)
+- [2. Markov Equivalence & Completed Partially Directed Acyclic Graph](#2-markov-equivalence--completed-partially-directed-acyclic-graph)
 - [3. The PC Algorithm: High-Level Overview](#3-the-pc-algorithm-high-level-overview)
+  - [3.1 Edge Deletion - Detailed Conditioning Strategy](#31-edge-deletion---detailed-conditioning-strategy) 
 - [4. Orientation Rules](#4-orientation-rules)
   - [4.1 Collider (v-structure) Orientation](#41-collider-v-structure-orientation)
   - [4.2 Meek’s Rules](#42-meeks-rules)
@@ -21,9 +23,16 @@ A concise, practical guide to the PC algorithm for learning causal structure fro
 - [7. Computational Complexity](#7-computational-complexity)
 - [8. Summary Tables](#8-summary-tables)
 
-> **Note:** This README uses GitHub's built‑in math rendering. Inline math is written with `$ ... $` and display equations with `$$ ... $$`.
-
 ---
+## 0. Notation
+X ⫫ Y | Z denotes *“X is conditionally independent of Y given Z”*.  
+Formally, for all values of $Z$:
+
+$$
+P(X, Y \mid Z) = P(X \mid Z) \, P(Y \mid Z)
+$$
+
+This means that once $Z$ is known, learning $Y$ provides no additional information about $X$ (and vice versa).
 
 ## 1. Assumptions
 
@@ -35,7 +44,7 @@ The PC algorithm assumes the true causal structure is a Directed Acyclic Graph (
 
 **Intuition.** Each node is generated from its parents and independent noise; once parents are known, additional non-descendant information doesn’t help.
 
-**Example.** For $A \to B \to C$, we have $C \perp\!\!\!\perp A \mid B$.
+**Example.** For $A \to B \to C$, we have C ⫫ A | B.
 
 ### 1.2 Faithfulness
 
@@ -47,10 +56,10 @@ The PC algorithm assumes the true causal structure is a Directed Acyclic Graph (
 
 ---
 
-## 2. Markov Equivalence & CPDAGs
+## 2. Markov Equivalence & Completed Partially Directed Acyclic Graph
 
 - **Limit of observational data.** Many DAGs entail the same set of CI relations; they form a **Markov equivalence class**.
-- **Characterization.** Two DAGs are Markov equivalent iff they share:
+- **Characterization.** Two DAGs are Markov equivalent _iff_ they share:
   1) the same **skeleton** (adjacencies) and
   2) the same set of **v-structures** (colliders $X \to Y \leftarrow Z$, with $X$ and $Z$ non-adjacent).
 - **Output of PC.** A **CPDAG** (Completed Partially Directed Acyclic Graph) that encodes the entire equivalence class:
@@ -64,10 +73,22 @@ The PC algorithm assumes the true causal structure is a Directed Acyclic Graph (
 ## 3. The PC Algorithm: High-Level Overview
 
 1. **Start with a complete undirected graph.** Every pair of variables is connected.
-2. **Edge deletion via CI tests.** Iteratively test (conditional) independence for pairs, conditioning on increasingly large subsets. If $X \perp\!\!\!\perp Y \mid Z$, remove the edge $X - Y$.
+2. **Edge deletion via CI tests.** Iteratively test (conditional) independence for pairs, conditioning on increasingly large subsets. If X ⫫ Y | Z, remove the edge $X - Y$.
 3. **Orient edges using rules.** First orient colliders; then apply **Meek’s rules** to propagate orientations to a maximally informative **CPDAG**.
 
-**Key idea.** CI tests prune the skeleton; orientation rules infer as much directionality as the data logically permits.
+### 3.1 Edge Deletion - Detailed Conditioning Strategy  
+The skeleton pruning phase removes edges by testing conditional independence for `(X, Y)` with increasingly large conditioning sets `Z`:
+
+- **|Z| = 0 (No conditioning):** Test unconditional independence. If `X ⫫ Y`, remove the edge.
+- **|Z| = 1 (Single-variable):** Test `X ⫫ Y | Z` for each single neighbor. Removes edges explained away by one variable.
+- **|Z| = 2 (Pairs):** Test with all neighbor pairs as conditioning sets.
+- **|Z| ≥ 3:** Increase `|Z|` until no more subsets remain or max size reached.
+
+**Notes:**
+- Choose `Z` from the adjacency set of the tested node (excluding the other variable).
+- If *any* `Z` makes `X` and `Y` independent (p ≥ α), delete the edge and store `Sep(X,Y)`.
+- Small conditioning sets are statistically stronger and computationally cheaper; large sets risk overfitting.
+
 
 ---
 
@@ -78,14 +99,14 @@ The PC algorithm assumes the true causal structure is a Directed Acyclic Graph (
 A **collider** has the form $A \to B \leftarrow C$. PC orients colliders as follows:
 
 - After skeleton discovery, suppose $A - B - C$ and $A$ is **not** adjacent to $C$.
-- If $B$ was **not** included in any conditioning set that rendered $A \perp\!\!\!\perp C \mid S$, **orient as a collider**: $A \to B \leftarrow C$.
+- If $B$ was **not** included in any conditioning set that rendered A ⫫ C | S, **orient as a collider**: $A \to B \leftarrow C$.
 - If $B$ was in such a conditioning set, **do not** orient as a collider.
 
 This is PC’s primary source of initial edge directions.
 
 ### 4.2 Meek’s Rules
 
-Notation: “$\to$” = directed edge; “$-$” = undirected; non-adjacency stated explicitly.
+Notation: $\to$ := directed edge; $-$ := undirected; non-adjacency stated explicitly.
 
 - **Rule 1 (Propagation).** If $A \to B - C$ and $A$ is not adjacent to $C$, orient $B - C$ as $B \to C$.
 - **Rule 2 (Avoid new colliders).** If $A - B$, $A \to C$, $C \to B$, and $A$ not adjacent to $B$, orient $A - B$ as $A \to B$.
@@ -99,20 +120,42 @@ These rules propagate directions while respecting acyclicity and avoiding unsupp
 ## 5. Conditional Independence (CI) Tests
 
 ### 5.1 Discrete Data: Chi-squared and G-test
-
-**Use case.** Independence in contingency tables (optionally stratified by conditioning variables).
+**Idea:** For discrete variables, use the **G-test** (likelihood ratio test) or **chi-squared test** on a contingency table of observed vs. expected counts under the null hypothesis of conditional independence.  
 
 **G-test (likelihood ratio) statistic**
 
 $$
-G = 2 \sum_{i=1}^{r} \sum_{j=1}^{c} O_{ij} \log\!\left(\frac{O_{ij}}{E_{ij}}\right)
+G = 2 \sum_{i=1}^{r} \sum_{j=1}^{c} O_{ij} \log\left(\frac{O_{ij}}{E_{ij}}\right)
 $$
 
-with degrees of freedom
-$$
-\mathrm{dof} = (r-1)(c-1),
-$$
+with degrees of freedom $\mathrm{dof} = (r-1)(c-1)$, 
 where $O$ and $E$ are observed/expected counts and $\log$ denotes the natural logarithm.
+
+**Why this works:**  
+- Conditional independence X ⫫ Y | Z means that, within each level (or stratum) of $Z$, the joint distribution of $X$ and $Y$ factorizes:
+  
+$$
+  P(X, Y \mid Z) = P(X \mid Z) \cdot P(Y \mid Z)
+$$
+
+- This factorization implies that the **expected cell counts** in the contingency table for $X$ and $Y$ given $Z$ can be computed as the product of their marginal probabilities within that stratum.  
+- **G-test:** compares observed counts $O_{ij}$ to expected counts $E_{ij}$ using:
+  
+$$
+  G = 2 \sum_{i,j} O_{ij} \log \frac{O_{ij}}{E_{ij}}
+$$
+  
+  Large values of $G$ indicate deviation from independence.
+- **Chi-squared test:** uses
+  
+$$
+  \chi^2 = \sum_{i,j} \frac{(O_{ij} - E_{ij})^2}{E_{ij}}
+$$
+  
+  to measure the same deviation but via squared differences.
+- When conditioning on $Z$, the test is repeated within each stratum defined by $Z$, and the statistics are summed across strata.  
+- If the summed statistic is **small** (and p-value large), the data is consistent with the null hypothesis that $X$ and $Y$ are independent given $Z$. If it’s **large** (small p-value), it suggests conditional dependence.
+
 
 **Python (G-test via `scipy.stats`):**
 ```python
@@ -162,6 +205,12 @@ def ci_test_discrete(df, x, y, z=None):
 ### 5.2 Continuous Data: Partial Correlation
 
 **Idea.** Regress $X$ and $Y$ on $Z$, then test correlation between residuals. Suitable under linear-Gaussian assumptions.
+
+**Why this works:**  
+If $X$ and $Y$ are conditionally independent given $Z$, then any statistical relationship between them should be fully explained by $Z$.  
+By regressing each variable on $Z$, we remove the linear component of their dependence on $Z$, leaving residuals $r_X$ and $r_Y$ that represent the variation unexplained by $Z$.  
+- If X ⫫ Y | Z holds under the linear-Gaussian model, $r_X$ and $r_Y$ will be *uncorrelated* and, in the Gaussian case, uncorrelatedness implies independence.  
+- If the residuals are still correlated, it means there is remaining association between $X$ and $Y$ after controlling for $Z$, which violates conditional independence.
 
 ```python
 import numpy as np
@@ -241,7 +290,11 @@ print(f"Conditional mutual information: {cmi_value:.3f}")
 
 ## 6. Illustrative Nonlinear Example: Regression vs KCI
 
-**Setup.** Latent $Z$; $X=\sin(Z)+$ Laplace noise, $Y=\cos(Z)+$ Laplace noise. Ground truth: $X \perp\!\!\!\perp Y \mid Z$.
+**Setup.** 
+- Latent $Z$
+- $X=\sin(Z)+$ Laplace noise
+- $Y=\cos(Z)+$ Laplace noise
+- Ground truth: X ⫫ Y | Z.
 
 ```python
 # pip install pycitest
@@ -278,11 +331,11 @@ print(f"KCI statistic: {stat:.3f}, p-value: {kci_pval:.3g}")
 
 - **Skeleton search (edge deletion).** For each pair $(X,Y)$, test CI over subsets of adjacent variables up to size $d$ (max degree). Worst-case number of tests is exponential in $d$.
 
-  $$\text{Worst case: }\ \mathcal{O}\!\left(n^{2}\,2^{d}\right)$$
+  $$\text{Worst case: }\ \mathcal{O}\left(n^{2}\,2^{d}\right)$$
 
 - **Edge orientation.** Application of orientation rules is typically polynomial, about $\mathcal{O}(n^{3})$.
 
-**Implications.** PC scales well on sparse graphs (small $d$), but can be intractable for dense graphs or hubs. Practical variants (e.g., **PC-stable**, **FastPC**, local/parallel PC) reduce sensitivity to ordering and/or improve efficiency.
+**Implications.** PC scales well on sparse graphs (small $d$), but can be intractable for dense graphs or hubs. Practical variants (e.g., **PC-stable**, **FastPC**) reduce sensitivity to ordering and/or improve efficiency.
 
 ---
 
@@ -291,14 +344,14 @@ print(f"KCI statistic: {stat:.3f}, p-value: {kci_pval:.3g}")
 ### 8.1 Core Concepts
 | Concept | Meaning |
 |---|---|
-| Conditional Independence | $X \perp\!\!\!\perp Y \mid Z$: $X$ and $Y$ independent given $Z$ |
+| Conditional Independence | X ⫫ Y | Z: $X$ and $Y$ independent given $Z$ |
 | Causal Markov | Each variable is independent of non-descendants given parents |
 | Faithfulness | All and only independencies in data arise from the DAG structure |
 
 ### 8.2 Orientation Cheatsheet
 | Concept | Main Use | Pattern | Orientation Logic |
 |---|---|---|---|
-| Collider | Orient v-structures | $A - B - C$, with $A$ and $C$ non-adjacent | If $B$ **not** in conditioning set that made $A \perp\!\!\!\perp C \mid S$, orient $A \to B \leftarrow C$ |
+| Collider | Orient v-structures | $A - B - C$, with $A$ and $C$ non-adjacent | If $B$ **not** in conditioning set that made A ⫫ C | S, orient $A \to B \leftarrow C$ |
 | Meek’s Rules | Propagate & avoid ambiguity | Mixed directed/undirected patterns | Orient to avoid cycles, avoid new unsupported colliders, and propagate clear directions |
 
 ### 8.3 Markov Equivalence & CPDAG
@@ -323,7 +376,5 @@ print(f"KCI statistic: {stat:.3f}, p-value: {kci_pval:.3g}")
 | KCI | ✅ | ✅ | Correct (fails to reject independence) |
 
 ---
-
-**Notation.** $X \perp\!\!\!\perp Y \mid Z$ denotes conditional independence.
 
 **Tip.** In practice, controlling the maximum conditioning set size and exploiting sparsity are critical for tractability.
