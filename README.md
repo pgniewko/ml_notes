@@ -1,5 +1,5 @@
 >Notice: These are my personal notes on topics that sparked my interest.
->This research project may not be actively maintained in the future.
+>This project may not be actively maintained in the future.
 >There is no guarantee of the accuracy or correctness of the information contained herein.
 >I welcome bug reports and pull requests; however, I make no guarantees regarding fixes or responses.
 
