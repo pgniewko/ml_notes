@@ -59,7 +59,7 @@ The PC algorithm assumes the true causal structure is a Directed Acyclic Graph (
 ## 2. Markov Equivalence & Completed Partially Directed Acyclic Graph
 
 - **Limit of observational data.** Many DAGs entail the same set of CI relations; they form a **Markov equivalence class**.
-- **Characterization.** Two DAGs are Markov equivalent _iff_ they share:
+- **Two DAGs are Markov equivalent** _iff_ they share:
   1) the same **skeleton** (adjacencies) and
   2) the same set of **v-structures** (colliders $X \to Y \leftarrow Z$, with $X$ and $Z$ non-adjacent).
 - **Output of PC.** A **CPDAG** (Completed Partially Directed Acyclic Graph) that encodes the entire equivalence class:
@@ -77,22 +77,24 @@ The PC algorithm assumes the true causal structure is a Directed Acyclic Graph (
 3. **Orient edges using rules.** First orient colliders; then apply **Meek’s rules** to propagate orientations to a maximally informative **CPDAG**.
 
 ### 3.1 Edge Deletion - Detailed Conditioning Strategy  
-The skeleton pruning phase removes edges by testing conditional independence for `(X, Y)` with increasingly large conditioning sets `Z`:
+The skeleton pruning phase removes edges by testing conditional independence for $(X, Y)$ with increasingly large conditioning sets $Z$:
 
-- **|Z| = 0 (No conditioning):** Test unconditional independence. If `X ⫫ Y`, remove the edge.
-- **|Z| = 1 (Single-variable):** Test `X ⫫ Y | Z` for each single neighbor. Removes edges explained away by one variable.
+- **|Z| = 0 (No conditioning):** Test unconditional independence. If X ⫫ Y, remove the edge.
+- **|Z| = 1 (Single-variable):** Test X ⫫ Y | Z for each single neighbor. Removes edges explained away by one variable.
 - **|Z| = 2 (Pairs):** Test with all neighbor pairs as conditioning sets.
-- **|Z| ≥ 3:** Increase `|Z|` until no more subsets remain or max size reached.
+- **|Z| ≥ 3:** Increase $|Z|$ until no more subsets remain or max size reached.
 
 **Notes:**
-- Choose `Z` from the adjacency set of the tested node (excluding the other variable).
-- If *any* `Z` makes `X` and `Y` independent (p ≥ α), delete the edge and store `Sep(X,Y)`.
+- Choose $Z$ from the adjacency set of the tested node (excluding the other variable).
+- If *any* $Z$ makes $X$ and $Y$ independent (p ≥ α), delete the edge and store $Sep(X,Y)$.
 - Small conditioning sets are statistically stronger and computationally cheaper; large sets risk overfitting.
 
 
 ---
 
 ## 4. Orientation Rules
+
+Notation: $\to$ := directed edge; $-$ := undirected; non-adjacency stated explicitly.
 
 ### 4.1 Collider (v-structure) Orientation
 
@@ -105,8 +107,6 @@ A **collider** has the form $A \to B \leftarrow C$. PC orients colliders as foll
 This is PC’s primary source of initial edge directions.
 
 ### 4.2 Meek’s Rules
-
-Notation: $\to$ := directed edge; $-$ := undirected; non-adjacency stated explicitly.
 
 - **Rule 1 (Propagation).** If $A \to B - C$ and $A$ is not adjacent to $C$, orient $B - C$ as $B \to C$.
 - **Rule 2 (Avoid new colliders).** If $A - B$, $A \to C$, $C \to B$, and $A$ not adjacent to $B$, orient $A - B$ as $A \to B$.
@@ -125,11 +125,11 @@ These rules propagate directions while respecting acyclicity and avoiding unsupp
 **G-test (likelihood ratio) statistic**
 
 $$
-G = 2 \sum_{i=1}^{r} \sum_{j=1}^{c} O_{ij} \log\left(\frac{O_{ij}}{E_{ij}}\right)
+G = 2 \sum_{i=1}^{r} \sum_{j=1}^{c} O_{ij} \ln\left(\frac{O_{ij}}{E_{ij}}\right)
 $$
 
 with degrees of freedom $\mathrm{dof} = (r-1)(c-1)$, 
-where $O$ and $E$ are observed/expected counts and $\log$ denotes the natural logarithm.
+where $O$ and $E$ are observed and expected counts.
 
 **Why this works:**  
 - Conditional independence X ⫫ Y | Z means that, within each level (or stratum) of $Z$, the joint distribution of $X$ and $Y$ factorizes:
@@ -139,11 +139,7 @@ $$
 $$
 
 - This factorization implies that the **expected cell counts** in the contingency table for $X$ and $Y$ given $Z$ can be computed as the product of their marginal probabilities within that stratum.  
-- **G-test:** compares observed counts $O_{ij}$ to expected counts $E_{ij}$ using:
-  
-$$
-  G = 2 \sum_{i,j} O_{ij} \log \frac{O_{ij}}{E_{ij}}
-$$
+- **G-test:** compares observed counts $O_{ij}$ to expected counts $E_{ij}$ using G statistic.
   
   Large values of $G$ indicate deviation from independence.
 - **Chi-squared test:** uses
@@ -153,6 +149,7 @@ $$
 $$
   
   to measure the same deviation but via squared differences.
+  
 - When conditioning on $Z$, the test is repeated within each stratum defined by $Z$, and the statistics are summed across strata.  
 - If the summed statistic is **small** (and p-value large), the data is consistent with the null hypothesis that $X$ and $Y$ are independent given $Z$. If it’s **large** (small p-value), it suggests conditional dependence.
 
@@ -331,7 +328,7 @@ print(f"KCI statistic: {stat:.3f}, p-value: {kci_pval:.3g}")
 
 - **Skeleton search (edge deletion).** For each pair $(X,Y)$, test CI over subsets of adjacent variables up to size $d$ (max degree). Worst-case number of tests is exponential in $d$.
 
-  $$\text{Worst case: }\ \mathcal{O}\left(n^{2}\,2^{d}\right)$$
+  $$\text{Worst case: }\ \mathcal{O}\left(n^{2}2^{d}\right)$$
 
 - **Edge orientation.** Application of orientation rules is typically polynomial, about $\mathcal{O}(n^{3})$.
 
@@ -369,12 +366,4 @@ print(f"KCI statistic: {stat:.3f}, p-value: {kci_pval:.3g}")
 | KCI | Continuous/general | `pycitest` | Yes | Yes |
 | CMI | Continuous/general | `npeet` | Yes | Yes |
 
-### 8.5 Nonlinear Demo Outcome
-| Method | Handles Nonlinearity? | Handles Non-Gaussian? | Typical Result in the Demo |
-|---|---|---|---|
-| Regression + Partial Corr | ❌ | ❌ | False positive (spurious dependence) |
-| KCI | ✅ | ✅ | Correct (fails to reject independence) |
-
 ---
-
-**Tip.** In practice, controlling the maximum conditioning set size and exploiting sparsity are critical for tractability.
