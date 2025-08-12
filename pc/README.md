@@ -29,7 +29,7 @@ X ⫫ Y | Z denotes *“X is conditionally independent of Y given Z”*.
 Formally, for all values of $Z$:
 
 $$
-P(X, Y \mid Z) = P(X \mid Z) \, P(Y \mid Z)
+P(X, Y \mid Z) = P(X \mid Z) P(Y \mid Z)
 $$
 
 This means that once $Z$ is known, learning $Y$ provides no additional information about $X$ (and vice versa).
