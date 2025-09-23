@@ -1,6 +1,6 @@
 # Sparse Autoencoder (SAE) – Top‑K & Gumbel‑Top‑K for Protein Embeddings
 
-This repo explores **Sparse Autoencoders (SAEs)** on per‑protein embeddings (e.g., PLM/ESM‑style). It reimplements a small but practical SAE stack with:
+This repo explores **Sparse Autoencoders (SAEs)** on per‑protein embeddings (`ProtT5`). It reimplements a small but practical SAE stack with:
 - A **simple (ReLU) SAE** using an L1 penalty,
 - A **hard Top‑K** sparse activation,
 - A **Gumbel‑Top‑K** activation that anneals from soft/stochastic to hard Top‑K.
@@ -20,7 +20,7 @@ We keep the code compact and reproducible, while adopting several training and i
   - Load HDF5 protein embeddings
   - Make an **80/10/10 train/val/test split**
   - Train **three models** and compare:
-    1) **ReLU+L1** (no Top‑K) — loss = NMSE + λ·L1  
+    1) **ReLU+L1** (no Top‑K) — loss = NMSE + $\lambda \cdot L_1$
     2) **TopK=64** (no L1) — loss = NMSE  
     3) **GumbelTopK=64** (no L1) — loss = NMSE
   - Log **loss** and **NMSE** on train/val/test
@@ -36,7 +36,7 @@ SAEs aim to learn **disentangled, sparse features**, where only a small subset o
 
 Two mainstream variants:
 
-- **L1 Sparse Autoencoder**: adds an L1 penalty on latent activations. Sparsity is encouraged but not guaranteed; the number of active units varies with λ and data scale.
+- **L1 Sparse Autoencoder**: adds an L1 penalty on latent activations. Sparsity is encouraged but not guaranteed; the number of active units varies with $\lambda$ and data scale.
 - **Top‑K Sparse Autoencoder**: enforces **exactly k** active units per sample (hard sparsity). Guarantees sparsity and yields fixed‑sized sparse codes, but the hard selection makes gradient flow trickier.
 
 ---
@@ -72,28 +72,28 @@ Two mainstream variants:
 
 The **Plackett–Luce (PL) model** is a probabilistic model for generating **rankings** from a set of items, each with an associated score or weight.
 
-- Each item \(i\) is assigned a positive parameter \(\theta_i\) (its "strength").
-- The probability that item \(i\) is chosen first is:
+- Each item $(i)$ is assigned a positive parameter $(\theta_i)$ (its "strength").
+- The probability that item $(i)$ is chosen first is:
 
-\[
+$$
 P(i \ \text{first}) = \frac{\theta_i}{\sum_j \theta_j}
-\]
+$$
 
 - After choosing \(i\), it is removed from the pool and the process repeats with the remaining items.
 
-The probability of a complete ranking \((i_1, i_2, \dots, i_K)\) is:
+The probability of a complete ranking $((i_1, i_2, \dots, i_K))$ is:
 
-\[
+$$
 P(i_1, i_2, \dots, i_K) = \prod_{k=1}^K \frac{\theta_{i_k}}{\sum_{j \in R_k} \theta_j}
-\]
+$$
 
-where \(R_k\) is the set of items still available at step \(k\).
+where $(R_k)$ is the set of items still available at step \(k\).
 
 ---
 
 ### Connection to Gumbel Sampling
 
-The **Gumbel–Max trick** shows that if we add independent Gumbel noise to each \(\log \theta_i\) and take the argmax, we sample from the categorical distribution defined by \(\theta\).
+The **Gumbel–Max trick** shows that if we add independent Gumbel noise to each $(\rm{log}\theta_i)$ and take the argmax, we sample from the categorical distribution defined by \(\theta\).
 
 Extending this to **Top-K**:
 - Adding Gumbel noise and **sorting** yields a ranking distributed according to the **Plackett–Luce model**.
@@ -142,10 +142,16 @@ We report two metrics per split:
   - ReLU+L1 model: `NMSE + λ·L1(latents)`  
   - TopK, GumbelTopK models: `NMSE` (no L1)
 - **NMSE** (Normalized Mean Squared Error):
-  \[ \text{NMSE} = \mathbb{E}_b\Big[ \frac{\|\hat{x}_b - x_b\|_2^2}{\|x_b\|_2^2} \Big] \]
+
+$$
+\text{NMSE} = \mathbb{E}_b\left[ \frac{\|\hat{x}_b - x_b\|_2^2}{\|x_b\|_2^2} \right]
+$$
 
 The L1 term uses:  
-\[ \text{L1} = \mathbb{E}_b\Big[ \frac{\|h_b\|_1}{\|x_b\|_2} \Big] \]
+
+$$
+\text{L1} = \mathbb{E}_b\left[ \frac{\|h_b\|_1}{\|x_b\|_2} \right]
+$$
 
 > **No auxiliary loss**: We deliberately **omit** the auxiliary reconstruction term sometimes used with Top‑K SAEs for reviving dead latents. With good init and GumbelTopK warmup, training is stable in our setting. Feel free to re‑enable an aux loss if your domain benefits from it.
 
@@ -171,7 +177,7 @@ For each model we collect **Loss** and **NMSE** on **train / val / test** every 
    - trains for `EPOCHS` with Adam + cosine schedule,
    - logs/plots results.
 
-> Hyperparameters: `n_latents`, `k`, `λ (L1)`, LR, batch size, and the Gumbel schedule (`tau_start`, `tau_end`, `anneal_steps`) are all exposed in the code.
+> Hyperparameters: `n_latents`, `k`, `$\lambda$ (L1)`, LR, batch size, and the Gumbel schedule (`tau_start`, `tau_end`, `anneal_steps`) are all exposed in the code.
 
 ---
 
@@ -180,7 +186,7 @@ For each model we collect **Loss** and **NMSE** on **train / val / test** every 
 - **Encoder init**: Kaiming uniform (good with ReLU‑like activations).  
 - **Tied decoder**: fewer parameters and an inductive bias toward symmetric encode/decode.  
 - **Row‑norm at init**: stabilizes early optimization (common in SAE repos).  
-- **Per‑sample LN** (`layer_norm_no_affine`) instead of `nn.LayerNorm`: we explicitly **don’t learn γ/β** to keep normalization purely geometric and avoid re‑centering by the network.
+- **Per‑sample LN** (`layer_norm_no_affine`) instead of `nn.LayerNorm`: we explicitly **don’t learn $\gamma$$/$\beta$** to keep normalization purely geometric and avoid re‑centering by the network.
 - **GumbelTopK** anneals **every forward** during training, avoiding manual stepping. When `τ → τ_end`, it **reduces to hard Top‑K** automatically.
 - **No auxiliary loss**: intentionally left out for simplicity; swap in if needed.
 
@@ -188,7 +194,7 @@ For each model we collect **Loss** and **NMSE** on **train / val / test** every 
 
 ## Results (what to expect)
 
-- **ReLU+L1** usually trains smoothly; sparsity depends on λ and data scale.  
+- **ReLU+L1** usually trains smoothly; sparsity depends on $\lambda$ and data scale.  
 - **TopK=64** yields **consistent sparsity** and often **clearer features**, but may require careful init to avoid dead units.  
 - **GumbelTopK=64** tends to **match Top‑K** at convergence while **improving early training** (fewer dead units, better gradients).
 
@@ -206,13 +212,13 @@ Exact numbers depend on your embeddings and training budget. See the final compa
 - *PNAS*: **Sparse autoencoders uncover biologically interpretable features in protein language model representations** — demonstrates biologically meaningful features in protein embeddings.  
   Repo: https://github.com/onkarsg10/Rep_SAEs_PLMs
 
-Additional repos that influenced practical details (init, normalization, Top‑K mechanics, training ergonomics):  
-- https://github.com/DanielKerrigan/saefarer  
-- https://github.com/EleutherAI/sae  
-- https://github.com/bartbussmann/BatchTopK  
-- https://github.com/tylercosgrove/sparse-autoencoder-mistral7b  
-- https://github.com/jbloomAus/SAELens  
-- https://github.com/neelnanda-io/1L-Sparse-Autoencoder
+<!-- Additional repos that influenced practical details (init, normalization, Top‑K mechanics, training ergonomics):   -->
+<!-- - https://github.com/DanielKerrigan/saefarer   -->
+<!-- - https://github.com/EleutherAI/sae   -->
+<!-- - https://github.com/bartbussmann/BatchTopK   -->
+<!-- - https://github.com/tylercosgrove/sparse-autoencoder-mistral7b   -->
+<!-- - https://github.com/jbloomAus/SAELens   -->
+<!-- - https://github.com/neelnanda-io/1L-Sparse-Autoencoder -->
 
 ---
 
