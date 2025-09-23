@@ -40,6 +40,7 @@ est = DRLearner(
 - **Example:** `model_propensity=LogisticRegression(...)`
 - **Purpose:** Estimate treatment assignment probability.
 - **Equation:**
+  
   $$
   \hat{e}(X_i) = P(T_i = 1 \mid X_i)
   $$
@@ -50,12 +51,14 @@ est = DRLearner(
 - **Example:** `model_regression=Ridge()`
 - **Purpose:** Predict expected outcomes for treated and untreated.
 - **Equations:**
-  $$
-  \hat{\mu}_1(X_i) = E[Y \mid T=1, X_i]
-  $$
-  $$
-  \hat{\mu}_0(X_i) = E[Y \mid T=0, X_i]
-  $$
+  
+$$
+\hat{\mu}_1(X_i) = E[Y \mid T=1, X_i]
+$$
+  
+$$
+\hat{\mu}_0(X_i) = E[Y \mid T=0, X_i]
+$$
 
 ---
 
@@ -63,31 +66,34 @@ est = DRLearner(
 - **Example:** `model_final=Ridge()`
 - **Purpose:** Learns the **Conditional Average Treatment Effect (CATE)** via pseudo-outcomes.
 - **Equation:**
-  $$
-  \hat{\tau}(X_i) = \text{CATE for sample } i
-  $$
+
+$$
+\hat{\tau}(X_i) = \text{CATE for sample } i
+$$
 
 ---
 
 ## 🧮 The DRLearner Equation
 
-For each sample \(i\):
+For each sample $i$:
 
 1. **Propensity Score:**
-   $$
-   \hat{e}_i = P(T_i = 1 \mid X_i)
-   $$
+
+$$
+\hat{e}_i = P(T_i = 1 \mid X_i)
+$$
 
 2. **Potential Outcomes:**
-   - \( \hat{\mu}_1(X_i) \): Predicted if treated  
-   - \( \hat{\mu}_0(X_i) \): Predicted if control
+   - $\hat{\mu}_1(X_i)$: Predicted if treated  
+   - $\hat{\mu}_0(X_i)$: Predicted if control
 
 3. **Pseudo-outcome Construction:**
-   $$
-   \tilde{Y}_i = \left( \frac{T_i - \hat{e}_i}{\hat{e}_i (1 - \hat{e}_i)} \right) \left( Y_i - \hat{\mu}_{T_i}(X_i) \right) + \left( \hat{\mu}_1(X_i) - \hat{\mu}_0(X_i) \right)
-   $$
 
-4. **Final Step:** Regress \(\tilde{Y}_i\) on \(X_i\) → CATE.
+$$
+\tilde{Y}_i = \left( \frac{T_i - \hat{e}_i}{\hat{e}_i (1 - \hat{e}_i)} \right) \left( Y_i - \hat{\mu}_{T_i}(X_i) \right) + \left( \hat{\mu}_1(X_i) - \hat{\mu}_0(X_i) \right)
+$$
+
+4. **Final Step:** Regress $\tilde{Y}_i$ on $X_i$ → CATE.
 
 ---
 
