@@ -8,3 +8,4 @@
 2. [Derivation of the Posteriors for Thompson Sampling](https://github.com/pgniewko/ml_notes/tree/main/ts)
 3. [Thoughts on the Vector Quantized Variational Autoencoder](./vqvae/)      
 4. [Peter-Clark Algorithm and conditional independence tests](./pc/)
+5. [Sparse Auto-Encoder for bio-embeddings](./sae/)
