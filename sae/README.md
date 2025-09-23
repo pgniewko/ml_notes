@@ -68,6 +68,38 @@ Two mainstream variants:
 - If exact `k`‑sparsity is not critical, and you’re comfortable tuning λ to get a desired sparsity regime.
 - Often a strong, simple baseline — we include it for direct comparison.
 
+## The Plackett–Luce Model
+
+The **Plackett–Luce (PL) model** is a probabilistic model for generating **rankings** from a set of items, each with an associated score or weight.
+
+- Each item \(i\) is assigned a positive parameter \(\theta_i\) (its "strength").
+- The probability that item \(i\) is chosen first is:
+
+\[
+P(i \ \text{first}) = \frac{\theta_i}{\sum_j \theta_j}
+\]
+
+- After choosing \(i\), it is removed from the pool and the process repeats with the remaining items.
+
+The probability of a complete ranking \((i_1, i_2, \dots, i_K)\) is:
+
+\[
+P(i_1, i_2, \dots, i_K) = \prod_{k=1}^K \frac{\theta_{i_k}}{\sum_{j \in R_k} \theta_j}
+\]
+
+where \(R_k\) is the set of items still available at step \(k\).
+
+---
+
+### Connection to Gumbel Sampling
+
+The **Gumbel–Max trick** shows that if we add independent Gumbel noise to each \(\log \theta_i\) and take the argmax, we sample from the categorical distribution defined by \(\theta\).
+
+Extending this to **Top-K**:
+- Adding Gumbel noise and **sorting** yields a ranking distributed according to the **Plackett–Luce model**.
+- This connection makes PL central to **Gumbel-TopK** activations: they effectively sample sparse rankings in a differentiable way, and as the temperature is annealed, the distribution converges to a hard Top-K selection.
+
+
 ---
 
 ## Architecture (high level)
