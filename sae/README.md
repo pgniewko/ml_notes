@@ -81,19 +81,19 @@ $$
 
 - After choosing \(i\), it is removed from the pool and the process repeats with the remaining items.
 
-The probability of a complete ranking $((i_1, i_2, \dots, i_K))$ is:
+The probability of a complete ranking $(i_1, i_2, \dots, i_K)$ is:
 
 $$
 P(i_1, i_2, \dots, i_K) = \prod_{k=1}^K \frac{\theta_{i_k}}{\sum_{j \in R_k} \theta_j}
 $$
 
-where $(R_k)$ is the set of items still available at step \(k\).
+where $R_k$ is the set of items still available at step \(k\).
 
 ---
 
 ### Connection to Gumbel Sampling
 
-The **Gumbel–Max trick** shows that if we add independent Gumbel noise to each $(\rm{log}\theta_i)$ and take the argmax, we sample from the categorical distribution defined by \(\theta\).
+The **Gumbel–Max trick** shows that if we add independent Gumbel noise to each $(\rm{log}\theta_i)$ and take the argmax, we sample from the categorical distribution defined by $\theta$.
 
 Extending this to **Top-K**:
 - Adding Gumbel noise and **sorting** yields a ranking distributed according to the **Plackett–Luce model**.
@@ -177,7 +177,7 @@ For each model we collect **Loss** and **NMSE** on **train / val / test** every 
    - trains for `EPOCHS` with Adam + cosine schedule,
    - logs/plots results.
 
-> Hyperparameters: `n_latents`, `k`, `$\lambda$ (L1)`, LR, batch size, and the Gumbel schedule (`tau_start`, `tau_end`, `anneal_steps`) are all exposed in the code.
+> Hyperparameters: `n_latents`, `k`, `λ (L1)`, LR, batch size, and the Gumbel schedule (`tau_start`, `tau_end`, `anneal_steps`) are all exposed in the code.
 
 ---
 
@@ -186,7 +186,7 @@ For each model we collect **Loss** and **NMSE** on **train / val / test** every 
 - **Encoder init**: Kaiming uniform (good with ReLU‑like activations).  
 - **Tied decoder**: fewer parameters and an inductive bias toward symmetric encode/decode.  
 - **Row‑norm at init**: stabilizes early optimization (common in SAE repos).  
-- **Per‑sample LN** (`layer_norm_no_affine`) instead of `nn.LayerNorm`: we explicitly **don’t learn $\gamma$$/$\beta$** to keep normalization purely geometric and avoid re‑centering by the network.
+- **Per‑sample LN** (`layer_norm_no_affine`) instead of `nn.LayerNorm`: we explicitly **don’t learn $\gamma$, $\beta$** to keep normalization purely geometric and avoid re‑centering by the network.
 - **GumbelTopK** anneals **every forward** during training, avoiding manual stepping. When `τ → τ_end`, it **reduces to hard Top‑K** automatically.
 - **No auxiliary loss**: intentionally left out for simplicity; swap in if needed.
 
