@@ -1,4 +1,6 @@
-# Sparse Autoencoder (SAE) – Top‑K & Gumbel‑Top‑K for Protein Embeddings
+# Sparse Autoencoder (SAE) 
+
+## Top‑K & Gumbel‑Top‑K for Protein Embeddings
 
 This repo explores **Sparse Autoencoders (SAEs)** on per‑protein embeddings (`ProtT5`). It reimplements a small but practical SAE stack with:
 - A **simple (ReLU) SAE** using an L1 penalty,
@@ -93,7 +95,7 @@ where $R_k$ is the set of items still available at step \(k\).
 
 ### Connection to Gumbel Sampling
 
-The **Gumbel–Max trick** shows that if we add independent Gumbel noise to each $(\rm{log}\theta_i)$ and take the argmax, we sample from the categorical distribution defined by $\theta$.
+The **Gumbel–Max trick** shows that if we add independent Gumbel noise to each $\rm{log}\theta_i$ and take the $\rm{argmax}$, we sample from the categorical distribution defined by $\theta$.
 
 Extending this to **Top-K**:
 - Adding Gumbel noise and **sorting** yields a ranking distributed according to the **Plackett–Luce model**.
@@ -116,7 +118,7 @@ Implementation details adopted for stability & performance:
 - **Kaiming/He init** for encoder, **tied decoder** (decoder = encoderᵀ).
 - Optional **row‑norm** of decoder (or column‑norm of encoder if tied) at init.
 - **Per‑sample LN** to reduce scale sensitivity.
-- Training‑side ergonomics: **AMP** (mixed precision), **grad clipping**, **cosine LR + warmup**, **pin_memory / num_workers** in loaders, and deterministic seeding.
+- Training‑side ergonomics: **grad clipping**, **cosine LR + warmup**, **pin_memory / num_workers** in loaders, and deterministic seeding.
 
 ---
 
@@ -159,7 +161,7 @@ $$
 
 ## Training the three variants
 
-We train (by default):
+We train:
 1. **ReLU+L1** (no Top‑K): `λ=1e-3` (tunable), `normalize=False`  
 2. **TopK=64**: `normalize=True`, **no L1**  
 3. **GumbelTopK=64**: `tau_start=1.0`, `tau_end≈1e-8`, `anneal_steps=10k`, `normalize=True`, **no L1**
@@ -196,7 +198,7 @@ For each model we collect **Loss** and **NMSE** on **train / val / test** every 
 
 - **ReLU+L1** usually trains smoothly; sparsity depends on $\lambda$ and data scale.  
 - **TopK=64** yields **consistent sparsity** and often **clearer features**, but may require careful init to avoid dead units.  
-- **GumbelTopK=64** tends to **match Top‑K** at convergence while **improving early training** (fewer dead units, better gradients).
+- **GumbelTopK=64** _should_ **match Top‑K** at convergence while **improving early training** (fewer dead units, better gradients).
 
 Exact numbers depend on your embeddings and training budget. See the final comparison figure in the notebook for your run.
 
