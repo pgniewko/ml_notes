@@ -1,9 +1,10 @@
-# Sparse Autoencoder (SAE) – Top‑K & Gumbel‑Top‑K for Protein Embeddings
+# Sparse Autoencoder (SAE) 
+
+## L1-SAE & Top‑K SAE for Protein Embeddings
 
 This repo explores **Sparse Autoencoders (SAEs)** on per‑protein embeddings (`ProtT5`). It reimplements a small but practical SAE stack with:
 - A **simple (ReLU) SAE** using an L1 penalty,
 - A **hard Top‑K** sparse activation,
-- A **Gumbel‑Top‑K** activation that anneals from soft/stochastic to hard Top‑K.
 
 We keep the code compact and reproducible, while adopting several training and initialization tricks inspired by recent SAE implementations.
 
@@ -15,19 +16,16 @@ We keep the code compact and reproducible, while adopting several training and i
 - **Activations**:
   - **ReLU** (baseline)
   - **`TopK(k)`**: keeps the top‑k activations per sample and zeroes out the rest
-  - **`GumbelTopK(k)`**: samples Top‑K with Gumbel noise and **linearly anneals** temperature each forward pass, converging to hard Top‑K
 - **Training script / notebook cells** that:
   - Load HDF5 protein embeddings
   - Make an **80/10/10 train/val/test split**
   - Train **three models** and compare:
     1) **ReLU+L1** (no Top‑K) — loss = NMSE + $\lambda \cdot L_1$
     2) **TopK=64** (no L1) — loss = NMSE  
-    3) **GumbelTopK=64** (no L1) — loss = NMSE
   - Log **loss** and **NMSE** on train/val/test
   - Plot a **comparison figure** across all models and splits
 
-> **Note**: This code **does not use the auxiliary loss** sometimes employed in Top‑K SAEs to mitigate dead neurons. We found the annealed GumbelTopK and better initialization already provide stable training; feel free to add an aux loss if you want to match specific papers exactly.
-
+> **Note**: This code **does not use the auxiliary loss** sometimes employed in Top‑K SAEs to mitigate dead neurons.
 ---
 
 ## Background: Why Sparse AEs?
@@ -41,64 +39,28 @@ Two mainstream variants:
 
 ---
 
-## Activations: ReLU vs Top‑K vs Gumbel‑Top‑K
+## Activations: ReLU vs Top‑K
 
 ### TL;DR comparison
 
-| Aspect | **ReLU + L1** | **Top‑K** | **Gumbel‑Top‑K** |
-|---|---|---|---|
-| **Sparsity** | Soft; controlled by λ; count varies | **Exactly `k`** actives per sample | Starts soft/stochastic → **exactly `k`** as τ→0 |
-| **Gradients** | Smooth, standard | Non‑diff. indices (uses STE‑style masking) | Smooth early via Gumbel softmax; becomes hard |
-| **Stability** | Usually stable | Can create **dead neurons** if poorly initialized | **Mitigates dead neurons** during warmup |
-| **Interpretability** | Moderate | High: fixed sparsity aids analysis | High: same as Top‑K at convergence |
-| **Hyperparams** | Choose λ | Choose k | Choose k + anneal schedule (τ_start, τ_end, steps) |
-
-### Why (and when) use Top‑K?
-- Guarantees a **fixed number of active features** — convenient for downstream analysis or indexing specific “concept neurons”.
-- Encourages competition among features; often yields **crisper, more interpretable** directions.
-- Caveat: Naïve training may lead to **dead units** (never selected). Good initialization and occasional re‑normalization help.
-
-### Why (and when) use Gumbel‑Top‑K?
-- Provides a **stochastic, differentiable relaxation** early on via Gumbel sampling + temperature **τ**.
-- We **anneal τ linearly** each forward call; when τ ≈ τ_end (tiny), the selection is effectively **hard Top‑K**.
-- This **reduces dead‑neuron risk** and improves early optimization while converging to the same sparsity pattern as hard Top‑K.
+| Aspect | **ReLU + L1** | **Top‑K** |
+|---|---|---|
+| **Sparsity** | Soft; controlled by λ; count varies | **Exactly `k`** actives per sample |
+| **Gradients** | Smooth, standard | Non‑diff. indices (uses STE‑style masking) |
+| **Stability** | Usually stable | Can create **dead neurons** if poorly initialized |
+| **Interpretability** | Moderate | High: fixed sparsity aids analysis |
+| **Hyperparams** | Choose λ | Choose k |
 
 ### When is the simple ReLU+L1 enough?
 - If you want a **baseline** or prefer **fully differentiable** training with fewer moving parts.
 - If exact `k`‑sparsity is not critical, and you’re comfortable tuning λ to get a desired sparsity regime.
 - Often a strong, simple baseline — we include it for direct comparison.
 
-## The Plackett–Luce Model
-
-The **Plackett–Luce (PL) model** is a probabilistic model for generating **rankings** from a set of items, each with an associated score or weight.
-
-- Each item $(i)$ is assigned a positive parameter $(\theta_i)$ (its "strength").
-- The probability that item $(i)$ is chosen first is:
-
-$$
-P(i \ \text{first}) = \frac{\theta_i}{\sum_j \theta_j}
-$$
-
-- After choosing \(i\), it is removed from the pool and the process repeats with the remaining items.
-
-The probability of a complete ranking $(i_1, i_2, \dots, i_K)$ is:
-
-$$
-P(i_1, i_2, \dots, i_K) = \prod_{k=1}^K \frac{\theta_{i_k}}{\sum_{j \in R_k} \theta_j}
-$$
-
-where $R_k$ is the set of items still available at step \(k\).
-
----
-
-### Connection to Gumbel Sampling
-
-The **Gumbel–Max trick** shows that if we add independent Gumbel noise to each $(\rm{log}\theta_i)$ and take the argmax, we sample from the categorical distribution defined by $\theta$.
-
-Extending this to **Top-K**:
-- Adding Gumbel noise and **sorting** yields a ranking distributed according to the **Plackett–Luce model**.
-- This connection makes PL central to **Gumbel-TopK** activations: they effectively sample sparse rankings in a differentiable way, and as the temperature is annealed, the distribution converges to a hard Top-K selection.
-
+  
+### Why (and when) use Top‑K?
+- Guarantees a **fixed number of active features** — convenient for downstream analysis or indexing specific “concept neurons”.
+- Encourages competition among features; often yields **crisper, more interpretable** directions.
+- Caveat: Naïve training may lead to **dead units** (never selected). Good initialization and occasional re‑normalization help.
 
 ---
 
@@ -107,7 +69,7 @@ Extending this to **Top-K**:
 ```
 x_norm, μ, σ = layer_norm_no_affine(x)        # per‑sample LN (no learned γ/β)
 z_pre = (x_norm - pre_bias) @ W_encᵀ + b_lat  # encoder (no bias in W_enc)
-h = activation(z_pre)                         # ReLU | TopK(k) | GumbelTopK(k)
+h = activation(z_pre)                         # ReLU | TopK(k)
 y_pre = decoder(h) + pre_bias                 # decoder (tied: W_dec = W_encᵀ)
 y = y_pre * σ + μ                             # undo normalization
 ```
@@ -116,7 +78,7 @@ Implementation details adopted for stability & performance:
 - **Kaiming/He init** for encoder, **tied decoder** (decoder = encoderᵀ).
 - Optional **row‑norm** of decoder (or column‑norm of encoder if tied) at init.
 - **Per‑sample LN** to reduce scale sensitivity.
-- Training‑side ergonomics: **AMP** (mixed precision), **grad clipping**, **cosine LR + warmup**, **pin_memory / num_workers** in loaders, and deterministic seeding.
+- Training‑side ergonomics: **grad clipping**, **cosine LR + warmup**, **pin_memory / num_workers** in loaders, and deterministic seeding.
 
 ---
 
@@ -140,29 +102,28 @@ We create an **80/10/10 split** (train/val/test) with a fixed seed for reproduci
 We report two metrics per split:
 - **Loss** (as optimized):  
   - ReLU+L1 model: `NMSE + λ·L1(latents)`  
-  - TopK, GumbelTopK models: `NMSE` (no L1)
+  - TopK model: `NMSE` (no L1)
 - **NMSE** (Normalized Mean Squared Error):
 
 $$
 \text{NMSE} = \mathbb{E}_b\left[ \frac{\|\hat{x}_b - x_b\|_2^2}{\|x_b\|_2^2} \right]
 $$
 
-The L1 term uses:  
+- **The L1 term**:  
 
 $$
 \text{L1} = \mathbb{E}_b\left[ \frac{\|h_b\|_1}{\|x_b\|_2} \right]
 $$
 
-> **No auxiliary loss**: We deliberately **omit** the auxiliary reconstruction term sometimes used with Top‑K SAEs for reviving dead latents. With good init and GumbelTopK warmup, training is stable in our setting. Feel free to re‑enable an aux loss if your domain benefits from it.
+> **No auxiliary loss**: We deliberately **omit** the auxiliary reconstruction term sometimes used with Top‑K SAEs for reviving dead latents. With good init, training is stable in our setting. Feel free to re‑enable an aux loss if your domain benefits from it.
 
 ---
 
-## Training the three variants
+## Training the two variants
 
-We train (by default):
+We train:
 1. **ReLU+L1** (no Top‑K): `λ=1e-3` (tunable), `normalize=False`  
-2. **TopK=64**: `normalize=True`, **no L1**  
-3. **GumbelTopK=64**: `tau_start=1.0`, `tau_end≈1e-8`, `anneal_steps=10k`, `normalize=True`, **no L1**
+2. **TopK=64**: `normalize=True`, no `L1` 
 
 For each model we collect **Loss** and **NMSE** on **train / val / test** every epoch and produce a **comparison plot** (2 rows × 3 columns; bars for each model).
 
@@ -177,7 +138,7 @@ For each model we collect **Loss** and **NMSE** on **train / val / test** every 
    - trains for `EPOCHS` with Adam + cosine schedule,
    - logs/plots results.
 
-> Hyperparameters: `n_latents`, `k`, `λ (L1)`, LR, batch size, and the Gumbel schedule (`tau_start`, `tau_end`, `anneal_steps`) are all exposed in the code.
+> Hyperparameters: `n_latents`, `k`, `λ (L1)`, LR, batch size are all exposed in the code.
 
 ---
 
@@ -187,7 +148,6 @@ For each model we collect **Loss** and **NMSE** on **train / val / test** every 
 - **Tied decoder**: fewer parameters and an inductive bias toward symmetric encode/decode.  
 - **Row‑norm at init**: stabilizes early optimization (common in SAE repos).  
 - **Per‑sample LN** (`layer_norm_no_affine`) instead of `nn.LayerNorm`: we explicitly **don’t learn $\gamma$, $\beta$** to keep normalization purely geometric and avoid re‑centering by the network.
-- **GumbelTopK** anneals **every forward** during training, avoiding manual stepping. When `τ → τ_end`, it **reduces to hard Top‑K** automatically.
 - **No auxiliary loss**: intentionally left out for simplicity; swap in if needed.
 
 ---
@@ -196,7 +156,6 @@ For each model we collect **Loss** and **NMSE** on **train / val / test** every 
 
 - **ReLU+L1** usually trains smoothly; sparsity depends on $\lambda$ and data scale.  
 - **TopK=64** yields **consistent sparsity** and often **clearer features**, but may require careful init to avoid dead units.  
-- **GumbelTopK=64** tends to **match Top‑K** at convergence while **improving early training** (fewer dead units, better gradients).
 
 Exact numbers depend on your embeddings and training budget. See the final comparison figure in the notebook for your run.
 
