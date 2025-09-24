@@ -10,6 +10,8 @@ It leverages both **propensity modeling** and **outcome regression**, combining 
 
 ## 🚀 Getting Started
 
+Training a `DRLearner` model is simple in `Python`
+
 ### Installation
 
 You’ll need [econml](https://github.com/microsoft/EconML) and scikit-learn:
