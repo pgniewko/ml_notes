@@ -10,3 +10,4 @@
 4. [Peter-Clark Algorithm and conditional independence tests](./pc/)
 5. [Sparse Auto-Encoder for bio-embeddings](./sae/)
 6. [Notes on Doubly Robust Learner (DRLearner) ](./drlearner/)
+7. [Physics-Informed Neural Networks](./pinn)
