@@ -1,6 +1,6 @@
 # Physics-Informed Neural Networks (PINNs)
 
-## 🔍 Overview
+## Overview
 
 Physics-Informed Neural Networks (PINNs) are a class of neural networks that integrate the governing laws of physics—typically expressed as differential equations—directly into the learning process.
 Unlike purely data-driven models, PINNs combine **data** and **physical priors** to learn solutions that are both accurate and physically consistent.
@@ -9,7 +9,7 @@ PINNs are particularly effective for solving **partial differential equations (P
 
 ---
 
-## ⚙️ How Physics Is Introduced into Neural Networks
+## How Physics Is Introduced into Neural Networks
 
 When training a neural model, physics can be incorporated in **three main ways**: through **data bias**, **inductive bias**, and **learning bias**.
 Each plays a distinct role in constraining or guiding the model toward physically meaningful behavior.
@@ -76,7 +76,7 @@ Here, the physics-based term enforces that the network’s predictions satisfy t
 
 ---
 
-## 🧠 Problem Description: 1D Heat Equation
+## Problem Description: 1D Heat Equation
 
 This repository demonstrates a PINN applied to the **1D heat conduction problem**, a classic PDE that models how temperature diffuses over time.
 
@@ -115,7 +115,7 @@ The neural network learns an approximation $u_\theta(x,t)$ by minimizing a **com
 The total loss combines a **data loss** term (supervised by available observations) and a **physics-informed loss** term (enforcing the PDE and its boundary/initial conditions):
 
 $$
-\mathcal{L}(\theta) = \mathcal{L}_{\text{data}} + \lambda_{\text{physics}}\,\mathcal{L}_{\text{physics}}
+L(\theta) = L_{\text{data}} + \lambda_{\text{physics}}L_{\text{physics}}
 $$
 
 ---
@@ -126,7 +126,7 @@ The **data loss** ensures that the network predictions match observed or simulat
 It is defined as a **mean squared error (MSE)**:
 
 $$
-\mathcal{L}_{\text{data}}(\theta)
+L_{\text{data}}(\theta)
 = \frac{1}{N_d} \sum_{i=1}^{N_d}
 \big\| u_\theta(x_i, t_i) - u_i^{\text{obs}} \big\|^2
 $$
@@ -143,17 +143,14 @@ The **physics-informed loss** enforces the governing laws of the system through 
 These are combined as:
 
 $$
-\mathcal{L}_{\text{physics}}(\theta)
-= \lambda_{\mathrm{IC}}\,\mathcal{L}_{\mathrm{IC}}(\theta)
-+ \lambda_{\mathrm{BC}}\,\mathcal{L}_{\mathrm{BC}}(\theta)
-+ \lambda_{\mathrm{PDE}}\,\mathcal{L}_{\mathrm{PDE}}(\theta)
+L_{\text{physics}}(\theta) = \lambda_{\mathrm{IC}}L_{\mathrm{IC}}(\theta) + \lambda_{\mathrm{BC}}L_{\mathrm{BC}}(\theta) + \lambda_{\mathrm{PDE}}L_{\mathrm{PDE}}(\theta)
 $$
 
 #### Initial Condition Loss
 Ensures that the network respects the known initial condition $u(x,0) = u_0(x)$:
 
 $$
-\mathcal{L}_{\mathrm{IC}}(\theta)
+L_{\mathrm{IC}}(\theta)
 = \frac{1}{|S_{\mathrm{IC}}|} \sum_{x_i \in S_{\mathrm{IC}}}
 \big\| u_\theta(x_i, 0) - u_0(x_i) \big\|^2
 $$
@@ -162,7 +159,7 @@ $$
 Enforces the boundary values $u(x_b, t) = g(x_b, t$) for all boundary points:
 
 $$
-\mathcal{L}_{\mathrm{BC}}(\theta)
+L_{\mathrm{BC}}(\theta)
 = \frac{1}{|S_{\mathrm{BC}}|} \sum_{(x_b, t_b) \in S_{\mathrm{BC}}}
 \big\| u_\theta(x_b, t_b) - g(x_b, t_b) \big\|^2
 $$
@@ -171,7 +168,7 @@ $$
 Ensures that the neural network satisfies the governing differential equation by penalizing its residual:
 
 $$
-\mathcal{L}_{\mathrm{PDE}}(\theta)
+L_{\mathrm{PDE}}(\theta)
 = \frac{1}{|S_f|} \sum_{(x_f, t_f) \in S_f}
 \big\| \mathcal{N}[u_\theta](x_f, t_f) \big\|^2
 $$
@@ -190,16 +187,9 @@ $$
 The complete optimization objective used for training the PINN becomes:
 
 $$
-\boxed{
-\min_{\theta}\;
-\Big(
-\mathcal{L}_{\text{data}}
-+ \lambda_{\mathrm{IC}}\,\mathcal{L}_{\mathrm{IC}}
-+ \lambda_{\mathrm{BC}}\,\mathcal{L}_{\mathrm{BC}}
-+ \lambda_{\mathrm{PDE}}\,\mathcal{L}_{\mathrm{PDE}}
-\Big)
-}
+\boxed{\min_{\theta}\Big(L_{\text{data}} + \lambda_{\mathrm{IC}}L_{\mathrm{IC}} + \lambda_{\mathrm{BC}}L_{\mathrm{BC}} + \lambda_{\mathrm{PDE}}L_{\mathrm{PDE}}\Big)}
 $$
+
 
 This formulation allows the network to simultaneously fit available data and remain consistent with the underlying physics (initial, boundary, and PDE constraints).
 
