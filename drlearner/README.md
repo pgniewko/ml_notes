@@ -30,10 +30,10 @@ $$
 
 ### Conditional Response Functions
 
-We define the expected outcome under each treatment level, conditional on covariates:
+We define the expected outcome under each treatment level (aka conditional expected potential outcomes, CEPOs), conditional on covariates:
 
 $$
-\mu_j(x) = \mathbb{E}[Y(j) \mid X = x], \quad j = 0,1
+\mu_j(x) = \mathbb{E}[Y(j) \mid X = x], \quad j = \in  \quad  x \in X
 $$
 
 These functions summarize how outcomes behave for individuals "like" $x$ under control vs treatment.
@@ -45,7 +45,7 @@ These functions summarize how outcomes behave for individuals "like" $x$ under c
 The **treatment effect** for covariate profile $x$ is:
 
 $$
-\tau(x) = \mu_1(x) - \mu_0(x)
+\tau(x) = \mathbb{E}[Y(1) - T(0) \mid X = x] = \mu_1(x) - \mu_0(x)
 $$
 
 This quantity tells us **how much the treatment changes the expected outcome** for individuals with features $x$.  
@@ -71,7 +71,7 @@ This is the probability that an individual with features $x$ receives the treatm
 The **Average Treatment Effect (ATE)**,
 
 $$
-\tau = \mathbb{E}[\tau(X)],
+\tau = \mathbb{E}[Y(1) - T(0)] = \mathbb{E}[\tau(X)] = \mathbb{E}[\mu_1(X) - \mu_0(X)],
 $$
 
 is a single number describing the overall benefit of treatment in the population.  
